@@ -1,0 +1,223 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+#include "config.h"
+
+#include <sstream>
+#include <fstream>
+#include <sys/types.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <assert.h>
+#include <cstring>
+
+#include "sockstream.h"
+
+using namespace std;
+
+class sockstreambuf : public filebuf {
+public:
+    sockstreambuf(SOCKET s, size_t sz = 64*1024) : sock(s), size(sz),
+                                                   buffer(NULL) {
+        buffer = new char[size];
+        setp(buffer, buffer + size - 1);
+        setg(buffer, buffer, buffer);
+    }
+
+    virtual ~sockstreambuf() {
+        sync();
+        delete []buffer;
+    }
+
+    virtual int overflow(int c) {
+        if (c != EOF) {
+            *pptr() = c;
+            pbump(1);
+        }
+
+        if (flushBuffer() == EOF) {
+            fprintf(stderr, "RETURNING EOF\n");
+            return EOF;
+        }
+
+        return c;
+    }
+
+    virtual int underflow() {
+        ssize_t nr;
+
+        while ((nr = recv(sock, buffer, size, 0)) == -1) {
+            switch (errno) {
+            case EINTR:
+                // retry
+                break;
+            default:
+                /* These should not happen. get a core file!! */
+                abort();
+            }
+        }
+        if (nr == 0) {
+            return EOF;
+        }
+        setg(buffer, buffer, buffer + nr);
+        return (unsigned char)buffer[0];
+    }
+
+    virtual int sync(){
+        if (flushBuffer() == EOF) {
+            return -1;
+        }
+
+        return 0;
+    }
+
+private:
+    int flushBuffer() {
+        ptrdiff_t nb = pptr() - pbase();
+
+        if (nb > 0) {
+            // @todo handle error code
+            if (send(sock, buffer, nb, 0) != nb) {
+                return EOF;
+            }
+
+            pbump(-nb);
+        }
+
+        return nb;
+    }
+
+    SOCKET sock;
+    size_t size;
+    char *buffer;
+};
+
+class osockstream : public ofstream {
+public:
+    osockstream(SOCKET sock) : buffer(sock) {
+        ios::rdbuf(&buffer);
+    }
+
+private:
+    sockstreambuf buffer;
+};
+
+class isockstream : public ifstream {
+public:
+    isockstream(SOCKET sock) : buffer(sock) {
+        ios::rdbuf(&buffer);
+    }
+
+private:
+    sockstreambuf buffer;
+};
+
+void Socket::resolve(void) throw (string)
+{
+    if (ai == NULL) {
+        struct addrinfo hints;
+        std::memset(&hints, 0, sizeof(hints));
+        hints.ai_flags = AI_PASSIVE;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_family = AF_UNSPEC;
+
+        int error = getaddrinfo(host.c_str(), port.c_str(), &hints, &ai);
+        if (error != 0) {
+            stringstream ss;
+            ss << "getaddrinfo(): "
+               << (error != EAI_SYSTEM) ? gai_strerror(error) : strerror(error);
+            throw ss.str();
+        }
+    }
+}
+
+void Socket::connect(void) throw (string)
+{
+    if (sock != INVALID_SOCKET) {
+        throw "Can't call connect() with an open Socket. Call close()!!";
+    }
+
+    resolve();
+
+    for (struct addrinfo *next= ai; next; next= next->ai_next) {
+        if ((sock = socket(ai->ai_family,
+                           ai->ai_socktype,
+                           ai->ai_protocol)) == INVALID_SOCKET) {
+            continue;
+        }
+
+        if (::connect(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
+            closesocket(sock);
+            sock = INVALID_SOCKET;
+            continue;
+        }
+
+        break;
+    }
+
+    if (sock == INVALID_SOCKET) {
+        stringstream msg;
+        msg << "Failed to connect to [" << host << ":" << port << "]";
+        throw msg.str();
+    }
+}
+
+void Socket::close(void) {
+    if (in) {
+        delete in;
+        in = NULL;
+    }
+
+    if (out) {
+        delete out;
+        out = NULL;
+    }
+
+    if (sock != INVALID_SOCKET) {
+#if 0
+        WSAIoctl(sock, SIO_FLUSH, NULL, 0, NULL, 0, NULL, NULL, NULL);
+#endif
+        shutdown(sock, SD_SEND); // disable sending of more data
+
+        closesocket(sock);
+        sock = INVALID_SOCKET;
+    }
+
+    if (ai != NULL) {
+        freeaddrinfo(ai);
+    }
+}
+
+ostream *Socket::getOutStream()
+{
+    if (out == NULL) {
+        out = new osockstream(sock);
+    }
+    return out;
+}
+
+istream *Socket::getInStream()
+{
+    if (in == NULL) {
+        in = new isockstream(sock);
+    }
+
+    return in;
+}
+
+void Socket::setNonBlocking() throw (std::string)
+{
+    int flags;
+    if ((flags = fcntl(sock, F_GETFL, 0)) < 0) {
+        stringstream msg;
+        msg << "Faile to get current flags: " << strerror(errno);
+        throw msg.str();
+    }
+
+    if ((flags & O_NONBLOCK) != O_NONBLOCK) {
+        if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0) {
+            stringstream msg;
+            msg << "Failed to enable O_NONBLOCK: " << strerror(errno);
+            throw msg.str();
+        }
+    }
+}
