@@ -212,12 +212,13 @@ int main(int argc, char **argv)
     for (vector<uint16_t>::iterator iter = buckets.begin();
          iter != buckets.end();
          ++iter) {
-        const char *location = vbucket_config_get_server(vbucket, *iter);
-        if (location == NULL) {
+
+        int idx = vbucket_get_master(vbucket, *iter);
+        if (idx == -1) {
             cerr << "Failed to resolve bucket: " << *iter << endl;
             return EX_CONFIG;
         }
-        Socket *sock = new Socket(location);
+        Socket *sock = new Socket(vbucket_config_get_server(vbucket, idx));
         try {
             sock->connect();
             sock->setNonBlocking();
