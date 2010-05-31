@@ -13,6 +13,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <list>
 #include <event.h>
 #include <memcached/vbucket.h>
 
@@ -30,7 +31,8 @@ static void usage(std::string binary) {
 
     cerr << "Usage: " << binary << " -h host:port -b # -m mapfile" << endl
          << "\t-h host:port Connect to host:port" << endl
-         << "\t-b #         Move bucket number #" << endl
+         << "\t-t           Move buckets from a server to another server"<< endl
+         << "\t-b #         Operate on bucket number #" << endl
          << "\t-m mapfile   The destination bucket map" << endl;
     exit(EX_USAGE);
 }
@@ -87,33 +89,40 @@ private:
 class UpstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
     void messageReceived(BinaryMessage *msg) {
-        std::map<uint16_t, BinaryMessagePipe*>::iterator iter;
-        iter = bucketMap->find(msg->getVBucketId());
-        if (iter == bucketMap->end()) {
+        map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
+        bucketIter = bucketMap->find(msg->getVBucketId());
+        if (bucketIter == bucketMap->end()) {
             std::cerr << "Internal server error!!"
                       << "Received a message for a bucket I didn't request:"
                       << msg->toString()
                       << std::endl;
             delete msg;
         } else {
-            iter->second->sendMessage(msg);
+            list<BinaryMessagePipe*>::iterator iter;
+            for (iter = bucketIter->second.begin();
+                 iter != bucketIter->second.end();
+                 iter++) {
+                (*iter)->sendMessage(msg);
+            }
         }
     }
 
-    void setBucketmap(map<uint16_t, BinaryMessagePipe*> &m) {
+    void setBucketmap(map<uint16_t, list<BinaryMessagePipe*> > &m) {
         bucketMap = &m;
     }
 
     void abort() {
-        std::map<uint16_t, BinaryMessagePipe*>::iterator iter;
-        for (iter = bucketMap->begin(); iter != bucketMap->end(); ++iter) {
-            // @todo this will cause recursive behavior etc...
-            iter->second->abort();
+        map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
+        for (bucketIter = bucketMap->begin(); bucketIter != bucketMap->end(); ++bucketIter) {
+            list<BinaryMessagePipe*>::iterator iter;
+            for (iter = bucketIter->second.begin(); iter != bucketIter->second.end(); ++iter) {
+                (*iter)->abort();
+            }
         }
     }
 
 private:
-    map<uint16_t, BinaryMessagePipe*> *bucketMap;
+    map<uint16_t, list<BinaryMessagePipe*> > *bucketMap;
 };
 
 extern "C" {
@@ -132,14 +141,38 @@ extern "C" {
     }
 }
 
+static BinaryMessagePipe *getServer(int serverindex,
+                                    VBUCKET_CONFIG_HANDLE vbucket,
+                                    BinaryMessagePipeCallback &cb,
+                                    struct event_base *b)
+{
+    static map<int, BinaryMessagePipe*> servermap;
+    BinaryMessagePipe* ret;
+
+    map<int, BinaryMessagePipe*>::iterator server = servermap.find(serverindex);
+    if (server == servermap.end()) {
+        Socket *sock = new Socket(vbucket_config_get_server(vbucket,
+                                                            serverindex));
+        sock->connect();
+        sock->setNonBlocking();
+        ret = new BinaryMessagePipe(*sock, cb, b);
+        servermap[serverindex] = ret;
+    } else {
+        ret = server->second;
+    }
+
+    return ret;
+}
+
 int main(int argc, char **argv)
 {
     int cmd;
     vector<uint16_t> buckets;
     const char *mapfile = NULL;
     string host;
+    bool takeover = false;
 
-    while ((cmd = getopt(argc, argv, "h:b:m:?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "h:b:m:t?")) != EOF) {
         switch (cmd) {
         case 'm':
             if (mapfile != NULL) {
@@ -159,7 +192,9 @@ int main(int argc, char **argv)
                 return EX_USAGE;
             }
             break;
-
+        case 't':
+            takeover = true;
+            break;
         case '?': /* FALLTHROUGH */
         default:
             usage(argv[0]);
@@ -208,28 +243,45 @@ int main(int argc, char **argv)
     UpstreamBinaryMessagePipeCallback upstream;
     DownstreamBinaryMessagePipeCallback downstream;
 
-    map<uint16_t, BinaryMessagePipe*> bucketMap;
+    map<int, BinaryMessagePipe*> servermap;
+    map<uint16_t, list<BinaryMessagePipe*> > bucketMap;
     for (vector<uint16_t>::iterator iter = buckets.begin();
          iter != buckets.end();
          ++iter) {
 
-        int idx = vbucket_get_master(vbucket, *iter);
-        if (idx == -1) {
-            cerr << "Failed to resolve bucket: " << *iter << endl;
-            return EX_CONFIG;
+        if (takeover) {
+            int idx = vbucket_get_master(vbucket, *iter);
+            if (idx == -1) {
+                cerr << "Failed to resolve bucket: " << *iter << endl;
+                return EX_CONFIG;
+            }
+            BinaryMessagePipe* pipe;
+            try {
+                pipe = getServer(idx, vbucket, downstream, evbase);
+            } catch (std::string& e) {
+                cerr << "Failed to connect to host for bucket " << *iter
+                     << ": " << e << std::endl;
+                return EX_CONFIG;
+            }
+            bucketMap[*iter].push_back(pipe);
+        } else {
+            int num  = vbucket_config_get_num_replicas(vbucket);
+            for (int ii = 0; ii < num; ++ii) {
+                int idx = vbucket_get_replica(vbucket, *iter, ii);
+                if (idx == -1) {
+                    continue;
+                }
+                BinaryMessagePipe* pipe;
+                try {
+                    pipe = getServer(idx, vbucket, downstream, evbase);
+                } catch (std::string& e) {
+                    cerr << "Failed to connect to host for bucket " << *iter
+                         << ": " << e << std::endl;
+                    return EX_CONFIG;
+                }
+                bucketMap[*iter].push_back(pipe);
+            }
         }
-        Socket *sock = new Socket(vbucket_config_get_server(vbucket, idx));
-        try {
-            sock->connect();
-            sock->setNonBlocking();
-        } catch (std::string& e) {
-            cerr << "Failed to connect to host for bucket " << *iter
-                 << ": " << e << std::endl;
-            delete sock;
-            return EX_CONFIG;
-        }
-
-        bucketMap[*iter] = new BinaryMessagePipe(*sock, downstream, evbase);
     }
 
     vbucket_config_destroy(vbucket);
@@ -238,7 +290,7 @@ int main(int argc, char **argv)
     sock.setNonBlocking();
 
     BinaryMessagePipe pipe(sock, upstream, evbase);
-    pipe.sendMessage(new TapRequestBinaryMessage(buckets));
+    pipe.sendMessage(new TapRequestBinaryMessage(buckets, takeover));
 
     upstream.setBucketmap(bucketMap);
     downstream.setUpstream(pipe);

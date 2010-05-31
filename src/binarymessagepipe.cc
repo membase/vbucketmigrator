@@ -16,7 +16,10 @@ void BinaryMessagePipe::step(short mask) {
             BinaryMessage *next = mq.pop();
             send(sock.getSocket(), next->data.rawBytes, next->size, 0);
             callback.messageSent(next);
-            delete next;
+            --next->refcount;
+            if (next->refcount == 0) {
+                delete next;
+            }
         }
     }
 

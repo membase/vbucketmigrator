@@ -23,12 +23,12 @@
 
 class BinaryMessage {
 public:
-    BinaryMessage() : size(0) {
+    BinaryMessage() : size(0), refcount(0) {
         data.rawBytes = NULL;
     }
 
     BinaryMessage(const protocol_binary_request_header &h) throw (std::runtime_error)
-        : size(ntohl(h.request.bodylen) + sizeof(h.bytes))
+        : size(ntohl(h.request.bodylen) + sizeof(h.bytes)), refcount(0)
     {
         // verify the internal
         if (h.request.magic != PROTOCOL_BINARY_REQ &&
@@ -66,6 +66,7 @@ public:
     }
 
     size_t size;
+    int refcount;
     union {
         protocol_binary_request_header *req;
         protocol_binary_request_tap_connect *tap_connect;
@@ -80,7 +81,9 @@ public:
 
 class TapRequestBinaryMessage : public BinaryMessage {
 public:
-    TapRequestBinaryMessage(std::vector<uint16_t> buckets) {
+    TapRequestBinaryMessage(std::vector<uint16_t> buckets, bool takeover) :
+        BinaryMessage()
+    {
         size = sizeof(data.tap_connect->bytes) + buckets.size() * 2 + 2;
         data.rawBytes = new char[size];
         data.req->request.magic = PROTOCOL_BINARY_REQ;
@@ -94,7 +97,10 @@ public:
         data.req->request.opaque = 0xcafecafe;
         data.req->request.cas = 0;
 
-        uint32_t flags = TAP_CONNECT_FLAG_LIST_VBUCKETS | TAP_CONNECT_FLAG_TAKEOVER_VBUCKETS;
+        uint32_t flags = TAP_CONNECT_FLAG_LIST_VBUCKETS;
+        if (takeover) {
+            flags |= TAP_CONNECT_FLAG_TAKEOVER_VBUCKETS;
+        }
         data.tap_connect->message.body.flags = htonl(flags);
 
         // To avoid alignment problems we have to do this the hard way..
