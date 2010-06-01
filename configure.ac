@@ -90,7 +90,7 @@ Specify its path using --with-memcached. ex: --with-memcached=../memcached
 AC_MSG_RESULT([$ac_with_memcached])
 MEMCACHED_DIR=$ac_with_memcached
 AC_SUBST(MEMCACHED_DIR)
-AM_CPPFLAGS="$AM_CPPFLAGS -I$MEMCACHED_DIR/include -I$top_srcdir"
+AM_CPPFLAGS="$AM_CPPFLAGS -I$MEMCACHED_DIR/include"
 
 AS_IF([test "x$SUNCC" = "xyes"],
       [
