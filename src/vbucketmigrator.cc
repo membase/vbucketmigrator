@@ -18,7 +18,7 @@
 
 #include "sockstream.h"
 #include "binarymessagepipe.h"
-#include "libvbucket/vbucket.h"
+#include <libvbucket/vbucket.h>
 
 using namespace std;
 
