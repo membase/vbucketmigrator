@@ -23,6 +23,8 @@
 
 using namespace std;
 
+static uint8_t verbosity(0);
+
 static void usage(std::string binary) {
     ssize_t idx = binary.find_last_of("/\\");
     if (idx != -1) {
@@ -33,7 +35,8 @@ static void usage(std::string binary) {
          << "\t-h host:port Connect to host:port" << endl
          << "\t-t           Move buckets from a server to another server"<< endl
          << "\t-b #         Operate on bucket number #" << endl
-         << "\t-m mapfile   The destination bucket map" << endl;
+         << "\t-m mapfile   The destination bucket map" << endl
+         << "\t-v           Increase verbosity" << endl;
     exit(EX_USAGE);
 }
 
@@ -143,6 +146,7 @@ extern "C" {
 
 static BinaryMessagePipe *getServer(int serverindex,
                                     VBUCKET_CONFIG_HANDLE vbucket,
+                                    uint16_t vbucketId,
                                     BinaryMessagePipeCallback &cb,
                                     struct event_base *b)
 {
@@ -155,6 +159,10 @@ static BinaryMessagePipe *getServer(int serverindex,
                                                             serverindex));
         sock->connect();
         sock->setNonBlocking();
+        if (verbosity) {
+            cout << "Connecting to downstream " << *sock
+                 << " for " << vbucketId << endl;
+        }
         ret = new BinaryMessagePipe(*sock, cb, b);
         servermap[serverindex] = ret;
     } else {
@@ -172,7 +180,7 @@ int main(int argc, char **argv)
     string host;
     bool takeover = false;
 
-    while ((cmd = getopt(argc, argv, "h:b:m:t?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "h:b:m:tv?")) != EOF) {
         switch (cmd) {
         case 'm':
             if (mapfile != NULL) {
@@ -194,6 +202,9 @@ int main(int argc, char **argv)
             break;
         case 't':
             takeover = true;
+            break;
+        case 'v':
+            ++verbosity;
             break;
         case '?': /* FALLTHROUGH */
         default:
@@ -257,7 +268,7 @@ int main(int argc, char **argv)
             }
             BinaryMessagePipe* pipe;
             try {
-                pipe = getServer(idx, vbucket, downstream, evbase);
+                pipe = getServer(idx, vbucket, *iter, downstream, evbase);
             } catch (std::string& e) {
                 cerr << "Failed to connect to host for bucket " << *iter
                      << ": " << e << std::endl;
@@ -273,7 +284,7 @@ int main(int argc, char **argv)
                 }
                 BinaryMessagePipe* pipe;
                 try {
-                    pipe = getServer(idx, vbucket, downstream, evbase);
+                    pipe = getServer(idx, vbucket, *iter, downstream, evbase);
                 } catch (std::string& e) {
                     cerr << "Failed to connect to host for bucket " << *iter
                          << ": " << e << std::endl;
@@ -282,6 +293,10 @@ int main(int argc, char **argv)
                 bucketMap[*iter].push_back(pipe);
             }
         }
+    }
+
+    if (verbosity) {
+        cout << "Connecting to source: " << host << endl;
     }
 
     vbucket_config_destroy(vbucket);

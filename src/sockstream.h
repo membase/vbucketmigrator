@@ -48,6 +48,10 @@ public:
         close();
     }
 
+    friend std::ostream& operator<< (std::ostream& o, const Socket &p) {
+        return o << "{Sock " << p.host << ":" << p.port << "}";
+    }
+
     void setNonBlocking() throw (std::string);
     void resolve(void) throw (std::string);
     void connect(void) throw (std::string);
