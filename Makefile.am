@@ -17,6 +17,15 @@ vbucketmigrator_SOURCES = src/binarymessage.h \
                           src/vbucketmigrator.cc
 vbucketmigrator_LDADD = ${LTLIBEVENT} ${LTLIBVBUCKET}
 
+
+man_MANS = \
+           vbucketmigrator.1m
+
+CLEANFILES= ${man_MANS}
+
+vbucketmigrator.1m: docs/vbucketmigrator.pod
+	${POD2MAN} -c "$*" -r "" -s 1m $< $@
+
 if BUILD_WINDOWS_FILES
 vbucketmigrator_SOURCES += src/mutex_win32.cc src/winsock.cc
 vbucketmigrator_LDADD += -lWs2_32 -lmswsock

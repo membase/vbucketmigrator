@@ -37,3 +37,4 @@
 Makefile
 Makefile.in
 vbucketmigrator
+vbucketmigrator.1m

@@ -17,6 +17,7 @@ PANDORA_CANONICAL_TARGET(less-warnings, warnings-always-on, require-cxx,
                          force-gcc42)
 PANDORA_REQUIRE_LIBEVENT
 PANDORA_REQUIRE_LIBVBUCKET
+REQUIRE_POD2MAN
 
 AH_TOP([
 #ifndef CONFIG_H

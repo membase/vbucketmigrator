@@ -1,0 +1,36 @@
+=head1 NAME
+
+vbucketmigrator - migrate virtual buckets
+
+=head1 SYNOPSIS
+
+  vbucketmigrator [options]
+
+=head1 DESCRIPTION
+
+vbucketmigrator lets you move/copy the content of one vbucket from one
+memcached server to another.
+
+=head1 OPTIONS
+
+The following options is supported:
+
+=over 4
+
+=item -h hostname:port
+
+Connect to the given host:port combination.
+
+=item -b bucket id
+
+Operate on the specified bucket id
+
+=item -m mapfile
+
+Use mapfile to map from a bucket id to a host id
+
+=item -t
+
+Move the responsibility for the buckets to the other servers
+
+=cut
