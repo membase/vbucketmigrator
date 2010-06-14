@@ -11,7 +11,6 @@
 
 #include "config.h"
 #include "binarymessage.h"
-#include "messagequeue.h"
 #include "mutex.h"
 #include "sockstream.h"
 
@@ -32,10 +31,9 @@ extern "C" {
 
 class BinaryMessagePipe {
 public:
-    BinaryMessagePipe(Socket &s, BinaryMessagePipeCallback &cb,
-                      struct event_base *b) :
-        sock(s), callback(cb), msg(NULL), avail(0), mq(), flags(0), base(b),
-        closed(false)
+    BinaryMessagePipe(Socket &s, BinaryMessagePipeCallback &cb, struct event_base *b) :
+        sock(s), callback(cb), msg(NULL), avail(0), flags(0), base(b),
+        sendptr(NULL), sendlen(0), closed(false)
     {
         updateEvent();
     }
@@ -49,6 +47,8 @@ public:
         sock.close();
     }
 
+    void authenticate(const std::string &authname, const std::string &password);
+
     void step(short flags);
 
     /**
@@ -60,34 +60,31 @@ public:
      */
     void sendMessage(BinaryMessage *message) {
         ++message->refcount;
-        mq.push(message);
+        queue.push(message);
         updateEvent();
     }
 
+    void updateEvent();
+
+
 protected:
-    friend void event_handler(int fd, short which, void *arg);
-    void updateEvent() {
-        short new_flags = EV_READ | EV_PERSIST;
-        if (!mq.empty()) {
-            new_flags |= EV_WRITE;
-        }
 
-        if (closed) {
-            assert(event_del(&ev) != -1);
-            return;
-        }
+    /**
+     * Read a message from the stream
+     * @return true if a complete message is available in msg, false otherwise
+     */
+    bool readMessage();
 
-        if (new_flags != flags) {
-            if (flags != 0) {
-                 assert(event_del(&ev) != -1);
-            }
-            event_set(&ev, sock.getSocket(), new_flags, event_handler,
-                      reinterpret_cast<void *>(this));
-            event_base_set(base, &ev);
-            assert(event_add(&ev, 0) != -1);
-            flags = new_flags;
-        }
-    }
+    /**
+     * Write as much as possible from the message queue to the socket
+     * @return true if all messages in the queue are successfully sent, false otherwise
+     */
+    bool drainBuffers();
+
+    /**
+     * Try to read and dispatch as many messages from the input pipe
+     */
+    void fillBuffers();
 
     Socket &sock;
     BinaryMessagePipeCallback &callback;
@@ -95,10 +92,14 @@ protected:
     size_t bufsz;
     protocol_binary_request_header header;
     size_t avail;
-    MessageQueue mq;
     short flags;
     struct event_base *base;
     struct event ev;
+
+    std::queue<BinaryMessage *> queue;
+    uint8_t *sendptr;
+    ssize_t sendlen;
+
     bool closed;
 };
 

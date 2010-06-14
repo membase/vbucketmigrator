@@ -17,6 +17,7 @@ PANDORA_CANONICAL_TARGET(less-warnings, warnings-always-on, require-cxx,
                          force-gcc42)
 PANDORA_REQUIRE_LIBEVENT
 PANDORA_REQUIRE_LIBVBUCKET
+PANDORA_REQUIRE_SASL
 REQUIRE_POD2MAN
 
 AH_TOP([
@@ -57,7 +58,7 @@ AC_DEFUN([AC_C_HTONLL],
 
 AC_C_HTONLL
 
-AC_CHECK_HEADERS([arpa/inet.h pthread.h windows.h winsock2.h ws2tcpip.h socket.h netinet/in.h netdb.h sysexits.h])
+AC_CHECK_HEADERS([arpa/inet.h pthread.h windows.h winsock2.h ws2tcpip.h socket.h netinet/in.h netdb.h sysexits.h sasl/sasl.h])
 
 AS_IF([test "x${ac_cv_header_windows_h}" = "xno"],
       [AC_SEARCH_LIBS(pthread_create, pthread)])

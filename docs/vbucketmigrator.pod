@@ -33,4 +33,16 @@ Use mapfile to map from a bucket id to a host id
 
 Move the responsibility for the buckets to the other servers
 
+=item -a auth
+
+Use SASL authentication to authenticate user "auth" to the memcached
+server. There is no option to provide the password (that would make it
+visible for other users by running ps(1). Instead vbucketmigrator will
+read the password from standard input. If you don't want to type it in
+yourself, you can always fall back to:
+
+
+echo "mypassword" | vbucketmigrator -a myuser [options]
+
+
 =cut

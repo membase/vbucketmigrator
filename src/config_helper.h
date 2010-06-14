@@ -70,6 +70,10 @@ extern void initialize_sockets(void);
 #include <sysexits.h>
 #endif
 
+#ifdef HAVE_SASL_SASL_H
+#include <sasl/sasl.h>
+#endif
+
 #ifndef EX_USAGE
 #define EX_USAGE EXIT_FAILURE
 #endif

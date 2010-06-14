@@ -36,6 +36,8 @@ static void usage(std::string binary) {
          << "\t-t           Move buckets from a server to another server"<< endl
          << "\t-b #         Operate on bucket number #" << endl
          << "\t-m mapfile   The destination bucket map" << endl
+         << "\t-a auth      Try to authenticate <auth>" << endl
+         << "\t             (Password should be provided on standard input)" << endl
          << "\t-v           Increase verbosity" << endl;
     exit(EX_USAGE);
 }
@@ -148,7 +150,9 @@ static BinaryMessagePipe *getServer(int serverindex,
                                     VBUCKET_CONFIG_HANDLE vbucket,
                                     uint16_t vbucketId,
                                     BinaryMessagePipeCallback &cb,
-                                    struct event_base *b)
+                                    struct event_base *b,
+                                    const std::string &auth,
+                                    const std::string &passwd)
 {
     static map<int, BinaryMessagePipe*> servermap;
     BinaryMessagePipe* ret;
@@ -157,13 +161,27 @@ static BinaryMessagePipe *getServer(int serverindex,
     if (server == servermap.end()) {
         Socket *sock = new Socket(vbucket_config_get_server(vbucket,
                                                             serverindex));
-        sock->connect();
-        sock->setNonBlocking();
         if (verbosity) {
             cout << "Connecting to downstream " << *sock
                  << " for " << vbucketId << endl;
         }
+        sock->connect();
         ret = new BinaryMessagePipe(*sock, cb, b);
+        if (auth.length() > 0) {
+            if (verbosity) {
+                cout << "Authenticating towards: " << *sock << endl;
+            }
+            try {
+                ret->authenticate(auth, passwd);
+                if (verbosity) {
+                    cout << "Authenticated towards: " << *sock << endl;
+                }
+            } catch (std::exception& e) {
+                throw std::string(e.what());
+            }
+        }
+        sock->setNonBlocking();
+        ret->updateEvent();
         servermap[serverindex] = ret;
     } else {
         ret = server->second;
@@ -179,9 +197,35 @@ int main(int argc, char **argv)
     const char *mapfile = NULL;
     string host;
     bool takeover = false;
+    string auth;
+    string passwd;
 
-    while ((cmd = getopt(argc, argv, "h:b:m:tv?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "a:h:b:m:tv?")) != EOF) {
         switch (cmd) {
+        case 'a':
+            if (sasl_client_init(NULL) != SASL_OK) {
+                fprintf(stderr, "Failed to initialize sasl library!\n");
+                return EX_OSERR;
+            }
+            atexit(sasl_done);
+            auth.assign(optarg);
+            if (isatty(fileno(stdin))) {
+                char *pw = getpass("Enter password: ");
+                if (pw == NULL) {
+                    return EXIT_FAILURE;
+                }
+                passwd.assign(pw);
+            } else {
+                char buffer[1024];
+                if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+                    cout << "Missing password" << endl;
+                    return EXIT_FAILURE;
+                }
+                passwd.assign(buffer);
+                ssize_t p = passwd.find_first_of("\r\n");
+                passwd.resize(p);
+            }
+            break;
         case 'm':
             if (mapfile != NULL) {
                 cerr << "Multiple mapfiles is not supported" << endl;
@@ -268,7 +312,7 @@ int main(int argc, char **argv)
             }
             BinaryMessagePipe* pipe;
             try {
-                pipe = getServer(idx, vbucket, *iter, downstream, evbase);
+                pipe = getServer(idx, vbucket, *iter, downstream, evbase, auth, passwd);
             } catch (std::string& e) {
                 cerr << "Failed to connect to host for bucket " << *iter
                      << ": " << e << std::endl;
@@ -284,7 +328,8 @@ int main(int argc, char **argv)
                 }
                 BinaryMessagePipe* pipe;
                 try {
-                    pipe = getServer(idx, vbucket, *iter, downstream, evbase);
+                    pipe = getServer(idx, vbucket, *iter, downstream, evbase,
+                                     auth, passwd);
                 } catch (std::string& e) {
                     cerr << "Failed to connect to host for bucket " << *iter
                          << ": " << e << std::endl;
@@ -302,11 +347,24 @@ int main(int argc, char **argv)
     vbucket_config_destroy(vbucket);
     Socket sock(host);
     sock.connect();
-    sock.setNonBlocking();
-
     BinaryMessagePipe pipe(sock, upstream, evbase);
+    if (auth.length() > 0) {
+        if (verbosity) {
+            cout << "Authenticating towards: " << sock << endl;
+        }
+        try {
+            pipe.authenticate(auth, passwd);
+            if (verbosity) {
+                cout << "Authenticated towards: " << sock << endl;
+            }
+        } catch (std::exception &e) {
+            cerr << "Failed to authenticate: " << e.what() << endl;
+            return EX_CONFIG;
+        }
+    }
+    sock.setNonBlocking();
     pipe.sendMessage(new TapRequestBinaryMessage(buckets, takeover));
-
+    pipe.updateEvent();
     upstream.setBucketmap(bucketMap);
     downstream.setUpstream(pipe);
 

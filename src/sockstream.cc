@@ -221,3 +221,43 @@ void Socket::setNonBlocking() throw (std::string)
         }
     }
 }
+
+std::string Socket::getLocalAddress() const throw (std::string) {
+    char h[NI_MAXHOST];
+    char p[NI_MAXSERV];
+    struct sockaddr_storage saddr;
+    socklen_t salen= sizeof(saddr);
+
+    if ((getsockname(sock, (struct sockaddr *)&saddr, &salen) < 0) ||
+        (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
+                     p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0))
+    {
+        stringstream msg;
+        msg << "Failed to get local address: " << strerror(errno);
+        throw msg.str();
+    }
+
+    std::stringstream ss;
+    ss << h << ";" << p;
+    return ss.str();
+}
+
+std::string Socket::getRemoteAddress() const throw (std::string) {
+    char h[NI_MAXHOST];
+    char p[NI_MAXSERV];
+    struct sockaddr_storage saddr;
+    socklen_t salen= sizeof(saddr);
+
+    if ((getpeername(sock, (struct sockaddr *)&saddr, &salen) < 0) ||
+        (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
+                     p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0))
+    {
+        stringstream msg;
+        msg << "Failed to get local address: " << strerror(errno);
+        throw msg.str();
+    }
+
+    std::stringstream ss;
+    ss << h << ";" << p;
+    return ss.str();
+}

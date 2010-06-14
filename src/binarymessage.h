@@ -69,6 +69,7 @@ public:
     int refcount;
     union {
         protocol_binary_request_header *req;
+        protocol_binary_response_header *res;
         protocol_binary_request_tap_connect *tap_connect;
         protocol_binary_request_tap_mutation *mutation;
         protocol_binary_request_tap_delete *remove;
@@ -113,6 +114,56 @@ public:
             memcpy(ptr, &val, 2);
             ptr += 2;
         }
+    }
+};
+
+class SaslListMechsBinaryMessage : public BinaryMessage {
+public:
+    SaslListMechsBinaryMessage() : BinaryMessage()
+    {
+        size = sizeof(data.req->bytes);
+        data.rawBytes = new char[size];
+        data.req->request.magic = PROTOCOL_BINARY_REQ;
+        data.req->request.opcode = PROTOCOL_BINARY_CMD_SASL_LIST_MECHS;
+        data.req->request.keylen = 0;
+        data.req->request.extlen = 0;
+        data.req->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+        data.req->request.vbucket = 0;
+        data.req->request.bodylen = 0;
+        data.req->request.opaque = 0xcafecafe;
+        data.req->request.cas = 0;
+    }
+};
+
+class SaslAuthBinaryMessage : public BinaryMessage {
+public:
+    SaslAuthBinaryMessage(size_t keylen, const char *key,
+                          size_t bodylen, const char *body) :
+        BinaryMessage()
+    {
+        size = sizeof(data.req->bytes) + keylen + bodylen;
+        data.rawBytes = new char[size];
+        data.req->request.magic = PROTOCOL_BINARY_REQ;
+        data.req->request.opcode = PROTOCOL_BINARY_CMD_SASL_AUTH;
+        data.req->request.keylen = htons((uint16_t)keylen);
+        data.req->request.extlen = 0;
+        data.req->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+        data.req->request.vbucket = 0;
+        data.req->request.bodylen = htonl((uint32_t)(keylen + bodylen));
+        data.req->request.opaque = 0xcafecafe;
+        data.req->request.cas = 0;
+        memcpy(data.req->bytes + sizeof(data.req->bytes), key, keylen);
+        memcpy(data.req->bytes + sizeof(data.req->bytes) + keylen, body, bodylen);
+    }
+};
+
+class SaslStepBinaryMessage : public SaslAuthBinaryMessage {
+public:
+    SaslStepBinaryMessage(size_t keylen, const char *key,
+                          size_t bodylen, const char *body) :
+        SaslAuthBinaryMessage(keylen, key, bodylen, body)
+    {
+        data.req->request.opcode = PROTOCOL_BINARY_CMD_SASL_STEP;
     }
 };
 

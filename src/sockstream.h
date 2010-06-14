@@ -52,6 +52,15 @@ public:
         return o << "{Sock " << p.host << ":" << p.port << "}";
     }
 
+    std::string toString() const {
+        std::stringstream ss;
+        ss << host << ":" << port;
+        return ss.str();
+    }
+
+    std::string getLocalAddress() const throw (std::string);
+    std::string getRemoteAddress() const throw (std::string);
+
     void setNonBlocking() throw (std::string);
     void resolve(void) throw (std::string);
     void connect(void) throw (std::string);

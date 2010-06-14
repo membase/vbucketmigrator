@@ -11,11 +11,10 @@ bin_PROGRAMS = vbucketmigrator
 vbucketmigrator_SOURCES = src/binarymessage.h \
                           src/binarymessagepipe.cc src/binarymessagepipe.h \
                           src/config_helper.h \
-                          src/messagequeue.h \
                           src/mutex.h \
                           src/sockstream.cc src/sockstream.h \
                           src/vbucketmigrator.cc
-vbucketmigrator_LDADD = ${LTLIBEVENT} ${LTLIBVBUCKET}
+vbucketmigrator_LDADD = ${LTLIBEVENT} ${LTLIBVBUCKET} ${LTLIBSASL} ${LTLIBSASL2}
 
 
 man_MANS = \
