@@ -72,7 +72,7 @@ bool BinaryMessagePipe::readMessage() {
     do {
         char *dst;
         size_t nbytes;
-        ssize_t nr;
+        ssize_t nr = 0;
 
         if (msg == NULL) {
             dst = reinterpret_cast<char*>(&header) + avail;
@@ -82,22 +82,25 @@ bool BinaryMessagePipe::readMessage() {
             nbytes = ntohl(header.request.bodylen) - avail;
         }
 
-        if ((nr = recv(sock.getSocket(), dst, nbytes, 0)) == -1) {
-            switch (errno) {
-            case EINTR:
-                break;
-            case EWOULDBLOCK:
-                return false;
-            default:
-                {
-                    std::stringstream err;
-                    err << "Failed to read from stream: " << strerror(errno);
-                    throw std::runtime_error(err.str());
+        if (nbytes > 0) {
+            if ((nr = recv(sock.getSocket(), dst, nbytes, 0)) == -1) {
+                switch (errno) {
+                case EINTR:
+                    break;
+                case EWOULDBLOCK:
+                    return false;
+                default:
+                    {
+                        std::stringstream err;
+                        err << "Failed to read from stream: "
+                            << strerror(errno);
+                        throw std::runtime_error(err.str());
+                    }
                 }
+            } else if (nr == 0) {
+                closed = true;
+                return false;
             }
-        } else if (nr == 0) {
-            closed = true;
-            return false;
         }
 
         avail += nr;
