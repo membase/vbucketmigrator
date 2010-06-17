@@ -31,13 +31,14 @@ static void usage(std::string binary) {
         binary = binary.substr(idx + 1);
     }
 
-    cerr << "Usage: " << binary << " -h host:port -b # -m mapfile" << endl
+    cerr << "Usage: " << binary << " -h host:port -b # [-m mapfile|-d desthost:destport]" << endl
          << "\t-h host:port Connect to host:port" << endl
          << "\t-t           Move buckets from a server to another server"<< endl
          << "\t-b #         Operate on bucket number #" << endl
          << "\t-m mapfile   The destination bucket map" << endl
          << "\t-a auth      Try to authenticate <auth>" << endl
          << "\t             (Password should be provided on standard input)" << endl
+         << "\t-d host:port Send all vbuckets to this server" << endl
          << "\t-v           Increase verbosity" << endl;
     exit(EX_USAGE);
 }
@@ -148,6 +149,7 @@ extern "C" {
 
 static BinaryMessagePipe *getServer(int serverindex,
                                     VBUCKET_CONFIG_HANDLE vbucket,
+                                    const string &destination,
                                     uint16_t vbucketId,
                                     BinaryMessagePipeCallback &cb,
                                     struct event_base *b,
@@ -159,8 +161,13 @@ static BinaryMessagePipe *getServer(int serverindex,
 
     map<int, BinaryMessagePipe*>::iterator server = servermap.find(serverindex);
     if (server == servermap.end()) {
-        Socket *sock = new Socket(vbucket_config_get_server(vbucket,
-                                                            serverindex));
+        string host;
+        if (vbucket != NULL) {
+            host.assign(vbucket_config_get_server(vbucket, serverindex));
+        } else {
+            host.assign(destination);
+        }
+        Socket *sock = new Socket(host);
         if (verbosity) {
             cout << "Connecting to downstream " << *sock
                  << " for " << vbucketId << endl;
@@ -196,11 +203,12 @@ int main(int argc, char **argv)
     vector<uint16_t> buckets;
     const char *mapfile = NULL;
     string host;
+    string destination;
     bool takeover = false;
     string auth;
     string passwd;
 
-    while ((cmd = getopt(argc, argv, "a:h:b:m:tv?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "a:h:b:m:d:tv?")) != EOF) {
         switch (cmd) {
         case 'a':
             if (sasl_client_init(NULL) != SASL_OK) {
@@ -231,7 +239,9 @@ int main(int argc, char **argv)
                 cerr << "Multiple mapfiles is not supported" << endl;
                 return EX_USAGE;
             }
-            mapfile = optarg;
+            break;
+        case 'd':
+            destination.assign(optarg);
             break;
         case 'h':
             host.assign(optarg);
@@ -269,8 +279,8 @@ int main(int argc, char **argv)
         return EX_USAGE;
     }
 
-    if (mapfile == NULL) {
-        cerr << "Can't perform bucket migration without a bucket map" << endl;
+    if (mapfile == NULL && destination.empty()) {
+        cerr << "Can't perform bucket migration without a bucket map or destination host" << endl;
         return EX_USAGE;
     }
 
@@ -279,14 +289,21 @@ int main(int argc, char **argv)
         return EX_USAGE;
     }
 
-    VBUCKET_CONFIG_HANDLE vbucket = vbucket_config_parse_file(mapfile);
-    if (vbucket == NULL) {
-        const char *msg = vbucket_get_error();
-        if (msg == NULL) {
-            msg = "Unknown error";
+    VBUCKET_CONFIG_HANDLE vbucket(NULL);
+    if (mapfile != NULL) {
+        if (!destination.empty()) {
+            cerr << "Cannot specify both map and destination" << endl;
+            return EX_USAGE;
         }
-        cerr << "Failed to parse vbucket config: " << msg << endl;
-        return EX_CONFIG;
+        vbucket = vbucket_config_parse_file(mapfile);
+        if (vbucket == NULL) {
+            const char *msg = vbucket_get_error();
+            if (msg == NULL) {
+                msg = "Unknown error";
+            }
+            cerr << "Failed to parse vbucket config: " << msg << endl;
+            return EX_CONFIG;
+        }
     }
 
     struct event_base *evbase = event_init();
@@ -305,30 +322,34 @@ int main(int argc, char **argv)
          ++iter) {
 
         if (takeover) {
-            int idx = vbucket_get_master(vbucket, *iter);
-            if (idx == -1) {
-                cerr << "Failed to resolve bucket: " << *iter << endl;
-                return EX_CONFIG;
+            int idx = 0;
+            if (vbucket != NULL) {
+                idx = vbucket_get_master(vbucket, *iter);
+                if (idx == -1) {
+                    cerr << "Failed to resolve bucket: " << *iter << endl;
+                    return EX_CONFIG;
+                }
             }
             BinaryMessagePipe* pipe;
             try {
-                pipe = getServer(idx, vbucket, *iter, downstream, evbase, auth, passwd);
+                pipe = getServer(idx, vbucket, destination, *iter, downstream, evbase, auth, passwd);
             } catch (std::string& e) {
                 cerr << "Failed to connect to host for bucket " << *iter
                      << ": " << e << std::endl;
                 return EX_CONFIG;
             }
             bucketMap[*iter].push_back(pipe);
-        } else {
+        } else if (vbucket != NULL) {
             int num  = vbucket_config_get_num_replicas(vbucket);
             for (int ii = 0; ii < num; ++ii) {
-                int idx = vbucket_get_replica(vbucket, *iter, ii);
+                int idx = 0;
+                vbucket_get_replica(vbucket, *iter, ii);
                 if (idx == -1) {
                     continue;
                 }
                 BinaryMessagePipe* pipe;
                 try {
-                    pipe = getServer(idx, vbucket, *iter, downstream, evbase,
+                    pipe = getServer(idx, vbucket, destination, *iter, downstream, evbase,
                                      auth, passwd);
                 } catch (std::string& e) {
                     cerr << "Failed to connect to host for bucket " << *iter
@@ -337,6 +358,16 @@ int main(int argc, char **argv)
                 }
                 bucketMap[*iter].push_back(pipe);
             }
+        } else {
+            BinaryMessagePipe* pipe;
+            try {
+                pipe = getServer(0, vbucket, destination, *iter, downstream, evbase, auth, passwd);
+            } catch (std::string& e) {
+                cerr << "Failed to connect to host for bucket " << *iter
+                     << ": " << e << std::endl;
+                return EX_CONFIG;
+            }
+            bucketMap[*iter].push_back(pipe);
         }
     }
 
@@ -344,7 +375,9 @@ int main(int argc, char **argv)
         cout << "Connecting to source: " << host << endl;
     }
 
-    vbucket_config_destroy(vbucket);
+    if (vbucket) {
+        vbucket_config_destroy(vbucket);
+    }
     Socket sock(host);
     sock.connect();
     BinaryMessagePipe pipe(sock, upstream, evbase);
