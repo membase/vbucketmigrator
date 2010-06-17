@@ -31,7 +31,8 @@ static void usage(std::string binary) {
         binary = binary.substr(idx + 1);
     }
 
-    cerr << "Usage: " << binary << " -h host:port -b # [-m mapfile|-d desthost:destport]" << endl
+    cerr << "Usage: " << binary
+         << " -h host:port -b # [-m mapfile|-d desthost:destport]" << endl
          << "\t-h host:port Connect to host:port" << endl
          << "\t-t           Move buckets from a server to another server"<< endl
          << "\t-b #         Operate on bucket number #" << endl
@@ -98,7 +99,7 @@ public:
         map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
         bucketIter = bucketMap->find(msg->getVBucketId());
         if (bucketIter == bucketMap->end()) {
-            std::cerr << "Internal server error!!"
+            std::cerr << "Internal server error!!" << std::endl
                       << "Received a message for a bucket I didn't request:"
                       << msg->toString()
                       << std::endl;

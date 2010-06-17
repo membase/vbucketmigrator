@@ -13,6 +13,7 @@
 #include <map>
 #include <string>
 #include <sstream>
+#include <iomanip>
 #include <cstring>
 #include <queue>
 #include <assert.h>
@@ -61,7 +62,10 @@ public:
 
     std::string toString() const {
         std::stringstream ss;
-        ss << "[ V: " << getVBucketId() << " k: <" << getKey() << ">]";
+        ss << "[ V: " << getVBucketId()
+           << " opcode: 0x" << std::setfill('0') << std::setw(2) << std::hex
+           << static_cast<int>(data.req->request.opcode)
+           << " k: <" << getKey() << ">]";
         return ss.str();
     }
 
