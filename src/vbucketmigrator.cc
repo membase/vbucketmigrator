@@ -97,6 +97,11 @@ class UpstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
     void messageReceived(BinaryMessage *msg) {
         map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
+        if (msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_NOOP) {
+            // Ignore NOOPs
+            delete msg;
+            return;
+        }
         bucketIter = bucketMap->find(msg->getVBucketId());
         if (bucketIter == bucketMap->end()) {
             std::cerr << "Internal server error!!" << std::endl
