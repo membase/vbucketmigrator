@@ -141,6 +141,17 @@ public:
         }
     }
 
+    void shutdown() {
+        map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
+        for (bucketIter = bucketMap->begin(); bucketIter != bucketMap->end(); ++bucketIter) {
+            list<BinaryMessagePipe*>::iterator iter;
+            for (iter = bucketIter->second.begin(); iter != bucketIter->second.end(); ++iter) {
+                (*iter)->shutdownInput();
+                (*iter)->updateEvent();
+            }
+        }
+    }
+
 private:
     map<uint16_t, list<BinaryMessagePipe*> > *bucketMap;
 };

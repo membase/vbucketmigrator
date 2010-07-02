@@ -129,12 +129,20 @@ void BinaryMessagePipe::fillBuffers() {
         callback.messageReceived(msg);
         msg = NULL;
     }
+
+    if (closed) {
+        callback.shutdown();
+    }
 }
 
 void BinaryMessagePipe::updateEvent() {
-    short new_flags = EV_READ | EV_PERSIST;
+    short new_flags = EV_PERSIST;
     if (!queue.empty()) {
         new_flags |= EV_WRITE;
+    }
+
+    if (doRead) {
+        new_flags |= EV_READ;
     }
 
     if (closed) {

@@ -31,6 +31,7 @@ public:
     virtual void messageReceived(BinaryMessage *msg) = 0;
     virtual void messageSent(BinaryMessage *msg) { (void)msg; };
     virtual void abort() = 0;
+    virtual void shutdown() {};
 };
 
 extern "C" {
@@ -41,7 +42,7 @@ class BinaryMessagePipe {
 public:
     BinaryMessagePipe(Socket &s, BinaryMessagePipeCallback &cb, struct event_base *b) :
         sock(s), callback(cb), msg(NULL), avail(0), flags(0), base(b),
-        sendptr(NULL), sendlen(0), closed(false)
+        sendptr(NULL), sendlen(0), closed(false), doRead(true)
     {
         updateEvent();
     }
@@ -56,6 +57,11 @@ public:
     }
 
     void authenticate(const std::string &authname, const std::string &password);
+
+    void shutdownInput(void) {
+        doRead = false;
+        updateEvent();
+    }
 
     void step(short flags);
 
@@ -109,6 +115,7 @@ protected:
     ssize_t sendlen;
 
     bool closed;
+    bool doRead;
 };
 
 #endif
