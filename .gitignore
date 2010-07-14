@@ -36,5 +36,6 @@
 /stamp-h1
 Makefile
 Makefile.in
+port_adaptor
 vbucketmigrator
 vbucketmigrator.1m
