@@ -222,29 +222,6 @@ static BinaryMessagePipe *getServer(int serverindex,
     return ret;
 }
 
-static void* check_stdin_thread(void* arg)
-{
-    (void)arg;
-    pthread_detach(pthread_self());
-
-    while (!feof(stdin)) {
-        getc(stdin);
-    }
-
-    fprintf(stderr, "EOF on stdin.  Exiting\n");
-    exit(0);
-    /* NOTREACHED */
-    return NULL;
-}
-
-static void stdin_check() {
-    pthread_t t;
-    if (pthread_create(&t, NULL, check_stdin_thread, NULL) != 0) {
-        perror("couldn't create stdin checking thread.");
-        exit(EX_OSERR);
-    }
-}
-
 int main(int argc, char **argv)
 {
     int cmd;
@@ -255,8 +232,6 @@ int main(int argc, char **argv)
     bool takeover = false;
     string auth;
     string passwd;
-
-    stdin_check();
 
     while ((cmd = getopt(argc, argv, "a:h:b:m:d:tv?")) != EOF) {
         switch (cmd) {
