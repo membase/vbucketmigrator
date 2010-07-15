@@ -36,7 +36,8 @@ static int wait_for_process(pid_t pid)
     sigaction(SIGPIPE, &sig_handler, NULL);
     sigaction(SIGCHLD, &sig_handler, NULL);
 
-    fgets(buf, sizeof(buf), stdin);
+    /* Ignore the result because it's just a signal for us */
+    (void)fgets(buf, sizeof(buf), stdin);
     if (caught != SIGCHLD) {
         if (kill(pid, SIGTERM) < 0) {
             perror("Failed to kill my child.");
