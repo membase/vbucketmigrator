@@ -25,6 +25,7 @@ static int wait_for_process(pid_t pid)
     int i = 0;
     struct sigaction sig_handler;
     char buf[256];
+    char *line = NULL;
 
     sig_handler.sa_handler = caught_signal;
     sig_handler.sa_flags = 0;
@@ -37,7 +38,7 @@ static int wait_for_process(pid_t pid)
     sigaction(SIGCHLD, &sig_handler, NULL);
 
     /* Ignore the result because it's just a signal for us */
-    (void)fgets(buf, sizeof(buf), stdin);
+    line = fgets(buf, sizeof(buf), stdin);
     if (caught != SIGCHLD) {
         if (kill(pid, SIGTERM) < 0) {
             perror("Failed to kill my child.");
