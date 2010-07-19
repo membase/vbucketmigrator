@@ -48,7 +48,7 @@ static int wait_for_process(pid_t pid)
         alarm(grace);
         p = waitpid(pid, &stats, 0);
         /* make sure we know if child is dead */
-	while (p < 0 && errno == EINTR) {
+	while (p == (pid_t)-1 && errno == EINTR) {
 		p = waitpid(pid, &stats, WNOHANG);
 	}
         if (p == pid) {
