@@ -38,4 +38,5 @@ Makefile
 Makefile.in
 port_adaptor
 vbucketmigrator
+vbucketmigrator.exe
 vbucketmigrator.1m

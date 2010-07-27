@@ -41,9 +41,9 @@ bool BinaryMessagePipe::drainBuffers() {
             }
 
             ssize_t nw;
-            nw = send(sock.getSocket(), sendptr, sendlen, 0);
+            nw = send(sock.getSocket(), (const char*)sendptr, sendlen, 0);
             if (nw == -1) {
-                switch (errno) {
+                switch (get_socket_errno()) {
                 case EINTR:
                     // retry
                     break;
@@ -53,7 +53,7 @@ bool BinaryMessagePipe::drainBuffers() {
                 default:
                     {
                         std::stringstream err;
-                        err << "Failed to write to stream: " << strerror(errno);
+                        err << "Failed to write to stream: " << strerror(get_socket_errno());
                         throw std::runtime_error(err.str());
                     }
                 }
@@ -92,7 +92,7 @@ bool BinaryMessagePipe::readMessage() {
 
         if (nbytes > 0) {
             if ((nr = recv(sock.getSocket(), dst, nbytes, 0)) == -1) {
-                switch (errno) {
+                switch (get_socket_errno()) {
                 case EINTR:
                     break;
                 case EWOULDBLOCK:
@@ -101,7 +101,7 @@ bool BinaryMessagePipe::readMessage() {
                     {
                         std::stringstream err;
                         err << "Failed to read from stream: "
-                            << strerror(errno);
+                            << strerror(get_socket_errno());
                         throw std::runtime_error(err.str());
                     }
                 }
@@ -194,7 +194,10 @@ extern "C" {
 
 void BinaryMessagePipe::authenticate(const std::string &authname,
                                      const std::string &password) {
-#ifdef ENABLE_SASL
+#ifndef ENABLE_SASL
+    (void)authname;
+    (void)password;
+#else
     if (password.length() > 127) {
         throw std::runtime_error(std::string("Password too long"));
     }

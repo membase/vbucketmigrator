@@ -60,8 +60,8 @@ public:
     virtual int underflow() {
         ssize_t nr;
 
-        while ((nr = recv(sock, buffer, size, 0)) == -1) {
-            switch (errno) {
+        while ((nr = recv(sock, buffer, size, 0)) == SOCKET_ERROR) {
+            switch (get_socket_errno()) {
             case EINTR:
                 // retry
                 break;
@@ -160,7 +160,7 @@ void Socket::connect(void) throw (string)
             continue;
         }
 
-        if (::connect(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
+        if (::connect(sock, ai->ai_addr, ai->ai_addrlen) == SOCKET_ERROR) {
             closesocket(sock);
             sock = INVALID_SOCKET;
             continue;
@@ -221,20 +221,30 @@ istream *Socket::getInStream()
 
 void Socket::setNonBlocking() throw (std::string)
 {
+#ifdef WIN32
+    u_long arg = 1;
+    if (ioctlsocket(sock, FIONBIO, &arg) == SOCKET_ERROR) {
+        stringstream msg;
+        msg << "Failed to enable nonblocking io: "
+            << strerror(get_socket_errno());
+        throw msg.str();
+    }
+#else
     int flags;
     if ((flags = fcntl(sock, F_GETFL, 0)) < 0) {
         stringstream msg;
-        msg << "Faile to get current flags: " << strerror(errno);
+        msg << "Failed to get current flags: " << strerror(get_socket_errno());
         throw msg.str();
     }
 
     if ((flags & O_NONBLOCK) != O_NONBLOCK) {
         if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0) {
             stringstream msg;
-            msg << "Failed to enable O_NONBLOCK: " << strerror(errno);
+            msg << "Failed to enable O_NONBLOCK: " << strerror(get_socket_errno());
             throw msg.str();
         }
     }
+#endif
 }
 
 std::string Socket::getLocalAddress() const throw (std::string) {
@@ -248,7 +258,7 @@ std::string Socket::getLocalAddress() const throw (std::string) {
                      p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0))
     {
         stringstream msg;
-        msg << "Failed to get local address: " << strerror(errno);
+        msg << "Failed to get local address: " << strerror(get_socket_errno());
         throw msg.str();
     }
 
@@ -268,7 +278,7 @@ std::string Socket::getRemoteAddress() const throw (std::string) {
                      p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0))
     {
         stringstream msg;
-        msg << "Failed to get local address: " << strerror(errno);
+        msg << "Failed to get local address: " << strerror(get_socket_errno());
         throw msg.str();
     }
 

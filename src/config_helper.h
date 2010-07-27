@@ -29,8 +29,18 @@
 #if defined(WIN32) || defined(__WIN32__)
 #define _WIN32_WINNT    0x0501
 typedef short in_port_t;
+#define EADDRINUSE WSAEADDRINUSE
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#define EINPROGRESS WSAEINPROGRESS
+#define EALREADY WSAEALREADY
+#define EISCONN WSAEISCONN
+#define ENOTCONN WSAENOTCONN
+#define ENOBUFS WSAENOBUFS
+#define SHUT_RDWR SD_BOTH
 #define EAI_SYSTEM -11
 extern void initialize_sockets(void);
+#define get_socket_errno() WSAGetLastError()
+
 #else
 #define initialize_sockets()
 #define SOCKET int
@@ -42,6 +52,7 @@ extern void initialize_sockets(void);
 #else
 #define closesocket(a) close(a)
 #endif
+#define get_socket_errno() errno
 #endif
 
 #ifdef HAVE_ARPA_INET_H
