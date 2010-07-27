@@ -29,8 +29,11 @@ vbucketmigrator_SOURCES = src/binarymessage.h \
 vbucketmigrator_LDADD = ${LTLIBEVENT} ${LTLIBVBUCKET} ${LTLIBSASL} ${LTLIBSASL2}
 
 
-man_MANS = \
-           vbucketmigrator.1m
+man_MANS =
+if BUILD_DOCS
+man_MANS += \
+            vbucketmigrator.1m
+endif
 
 CLEANFILES= ${man_MANS}
 

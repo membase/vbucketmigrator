@@ -27,7 +27,6 @@ PANDORA_CANONICAL_TARGET(less-warnings, warnings-always-on, require-cxx,
 PANDORA_REQUIRE_LIBEVENT
 PANDORA_REQUIRE_LIBVBUCKET
 PANDORA_REQUIRE_SASL
-REQUIRE_POD2MAN
 
 AH_TOP([
 #ifndef CONFIG_H
@@ -114,6 +113,18 @@ AH_BOTTOM([
 #endif
 ])
 
+AC_ARG_WITH([docs],
+  [AS_HELP_STRING([--with-docs],
+    [Generate documentation (yes|no) @<:@default=yes@:>@])],
+  [with_docs=$withval],
+  [with_docs=yes])
+
+AS_IF([test "$with_docs" = "yes"],
+  [
+    REQUIRE_POD2MAN
+  ])
+AM_CONDITIONAL(BUILD_DOCS, test "$with_docs" = "yes")
+
 dnl ----------------------------------------------------------------------------
 
 AC_CONFIG_FILES(Makefile)
@@ -132,3 +143,14 @@ echo "   * Warnings as failure:       $ac_cv_warnings_as_errors"
 echo "   * Memcached location:        $ac_with_memcached"
 echo ""
 echo "---"
+
+AS_IF(test "$with_docs" = "no",
+  [
+    echo "*****"
+    echo "*"
+    echo "*  WARNING: You are not generating any documentation."
+    echo "*           Please don't ship vbucketmigrator to an end user"
+    echo "*           without documentation..."
+    echo "*"
+    echo "*****"
+  ])
