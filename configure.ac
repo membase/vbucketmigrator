@@ -26,7 +26,6 @@ PANDORA_CANONICAL_TARGET(less-warnings, warnings-always-on, require-cxx,
                          force-gcc42)
 PANDORA_REQUIRE_LIBEVENT
 PANDORA_REQUIRE_LIBVBUCKET
-PANDORA_REQUIRE_SASL
 
 AH_TOP([
 #ifndef CONFIG_H
@@ -125,6 +124,18 @@ AS_IF([test "$with_docs" = "yes"],
   ])
 AM_CONDITIONAL(BUILD_DOCS, test "$with_docs" = "yes")
 
+AC_ARG_WITH([sasl],
+  [AS_HELP_STRING([--with-sasl],
+    [with support for SASL (yes|no) @<:@default=yes@:>@])],
+  [with_sasl=$withval],
+  [with_sasl=yes])
+
+AS_IF([test "$with_sasl" = "yes"],
+  [
+    PANDORA_REQUIRE_SASL
+    AC_DEFINE(ENABLE_SASL, 1, [Enable sasl support])
+  ])
+
 dnl ----------------------------------------------------------------------------
 
 AC_CONFIG_FILES(Makefile)
@@ -141,6 +152,7 @@ echo "   * Assertions enabled:        $ac_cv_assert"
 echo "   * Debug enabled:             $with_debug"
 echo "   * Warnings as failure:       $ac_cv_warnings_as_errors"
 echo "   * Memcached location:        $ac_with_memcached"
+echo "   * SASL support:              $with_sasl"
 echo ""
 echo "---"
 

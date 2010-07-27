@@ -162,6 +162,7 @@ void BinaryMessagePipe::updateEvent() {
     }
 }
 
+#ifdef ENABLE_SASL
 extern "C" {
     static int get_username(void *context, int id, const char **result,
                             unsigned int *len) {
@@ -189,9 +190,11 @@ extern "C" {
 
     typedef int(*SASLFUNC)();
 }
+#endif
 
 void BinaryMessagePipe::authenticate(const std::string &authname,
                                      const std::string &password) {
+#ifdef ENABLE_SASL
     if (password.length() > 127) {
         throw std::runtime_error(std::string("Password too long"));
     }
@@ -313,4 +316,5 @@ void BinaryMessagePipe::authenticate(const std::string &authname,
 
         message = new SaslStepBinaryMessage(clen, chosenmech, len, data);
     } while (true);
+#endif
 }

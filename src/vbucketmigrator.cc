@@ -236,6 +236,7 @@ int main(int argc, char **argv)
     while ((cmd = getopt(argc, argv, "a:h:b:m:d:tv?")) != EOF) {
         switch (cmd) {
         case 'a':
+#ifdef ENABLE_SASL
             if (sasl_client_init(NULL) != SASL_OK) {
                 fprintf(stderr, "Failed to initialize sasl library!\n");
                 return EX_OSERR;
@@ -259,6 +260,10 @@ int main(int argc, char **argv)
                 passwd.resize(p);
             }
             break;
+#else
+            fprintf(stderr, "Not built with SASL support\n");
+            return EX_USAGE;
+#endif
         case 'm':
             if (mapfile != NULL) {
                 cerr << "Multiple mapfiles is not supported" << endl;
