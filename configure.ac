@@ -136,6 +136,9 @@ AS_IF([test "$with_sasl" = "yes"],
     AC_DEFINE(ENABLE_SASL, 1, [Enable sasl support])
   ])
 
+AC_CHECK_FUNCS_ONCE(fork)
+AM_CONDITIONAL(BUILD_PORT_ADAPTOR, test "x$ac_cv_func_fork" = "xyes")
+
 dnl ----------------------------------------------------------------------------
 
 AC_CONFIG_FILES(Makefile)
@@ -153,6 +156,7 @@ echo "   * Debug enabled:             $with_debug"
 echo "   * Warnings as failure:       $ac_cv_warnings_as_errors"
 echo "   * Memcached location:        $ac_with_memcached"
 echo "   * SASL support:              $with_sasl"
+echo "   * port_adaptor support:      $ac_cv_func_fork"
 echo ""
 echo "---"
 
