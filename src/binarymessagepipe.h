@@ -53,6 +53,8 @@ public:
     void abort() {
         callback.abort();
         closed = true;
+        // we need to delete event before closing fd
+        updateEvent();
         sock.close();
     }
 
