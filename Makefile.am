@@ -30,8 +30,15 @@ vbucketmigrator_SOURCES = src/binarymessage.h \
                           src/mutex.h \
                           src/sockstream.cc src/sockstream.h \
                           src/vbucketmigrator.cc
-vbucketmigrator_LDADD = ${LTLIBEVENT} ${LTLIBVBUCKET} ${LTLIBSASL} ${LTLIBSASL2}
+vbucketmigrator_LDADD = ${LTLIBEVENT} ${LTLIBVBUCKET}
 
+if HAVE_SASL
+vbucketmigrator_LDADD +=  ${LTLIBSASL} ${LTLIBSASL2}
+endif
+
+if BUILD_ISASL
+vbucketmigrator_SOURCES += src/isasl.h src/isasl.c
+endif
 
 man_MANS =
 if BUILD_DOCS

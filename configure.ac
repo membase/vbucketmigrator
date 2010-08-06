@@ -130,13 +130,31 @@ AC_ARG_WITH([sasl],
   [with_sasl=$withval],
   [with_sasl=yes])
 
+sasl_support=none
 AS_IF([test "$with_sasl" = "yes"],
   [
     PANDORA_REQUIRE_SASL
     AC_DEFINE(ENABLE_SASL, 1, [Enable sasl support])
+    sasl_support=sasl
   ])
 
-AC_CHECK_FUNCS_ONCE(fork)
+AC_ARG_WITH([isasl],
+  [AS_HELP_STRING([--with-isasl],
+    [with support for iSASL (yes|no) @<:@default=no@:>@])],
+  [with_isasl=$withval],
+  [with_isasl=no])
+
+AS_IF([test "$with_isasl" = "yes"],
+      [AS_IF([test "$with_sasl" = "yes"],
+             [AC_MSG_ERROR([Can't use both sasl and isasl])])
+       AC_DEFINE(HAVE_ISASL, 1, [Define if you want to use iSASL])
+       AC_DEFINE(ENABLE_SASL, 1, [Enable sasl support])
+       sasl_support=isasl
+      ])
+
+AM_CONDITIONAL(BUILD_ISASL, test "$with_isasl" = "yes")
+
+AC_CHECK_FUNCS_ONCE(fork getpass)
 AM_CONDITIONAL(BUILD_PORT_ADAPTOR, test "x$ac_cv_func_fork" = "xyes")
 
 dnl ----------------------------------------------------------------------------
@@ -155,7 +173,7 @@ echo "   * Assertions enabled:        $ac_cv_assert"
 echo "   * Debug enabled:             $with_debug"
 echo "   * Warnings as failure:       $ac_cv_warnings_as_errors"
 echo "   * Memcached location:        $ac_with_memcached"
-echo "   * SASL support:              $with_sasl"
+echo "   * SASL support:              $sasl_support"
 echo "   * port_adaptor support:      $ac_cv_func_fork"
 echo ""
 echo "---"

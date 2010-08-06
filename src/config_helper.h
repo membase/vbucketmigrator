@@ -89,7 +89,9 @@ extern void initialize_sockets(void);
 #include <sysexits.h>
 #endif
 
-#ifdef HAVE_SASL_SASL_H
+#ifdef HAVE_ISASL
+#include "isasl.h"
+#elif defined(HAVE_SASL_SASL_H)
 #include <sasl/sasl.h>
 #endif
 
@@ -101,6 +103,9 @@ extern void initialize_sockets(void);
 #endif
 #ifndef EX_IOERR
 #define EX_IOERR (EX_CONFIG + 1)
+#endif
+#ifndef EX_OSERR
+#define EX_OSERR (EX_IOERR + 1)
 #endif
 #ifndef EX_OK
 #define EX_OK EXIT_SUCCESS

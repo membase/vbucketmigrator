@@ -222,6 +222,27 @@ static BinaryMessagePipe *getServer(int serverindex,
     return ret;
 }
 
+#ifndef HAVE_GETPASS
+static char *getpass(const char *prompt)
+{
+    static char buffer[1024];
+    fprintf(stdout, "%s", prompt);
+    fflush(stdout);
+
+    if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+        return NULL;
+    }
+
+    size_t len = strlen(buffer) - 1;
+    while (buffer[len] == '\r' || buffer[len] == '\n') {
+        buffer[len] = '\0';
+        --len;
+    }
+
+    return buffer;
+}
+#endif
+
 int main(int argc, char **argv)
 {
     int cmd;
