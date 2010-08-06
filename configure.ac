@@ -154,8 +154,7 @@ AS_IF([test "$with_isasl" = "yes"],
 
 AM_CONDITIONAL(BUILD_ISASL, test "$with_isasl" = "yes")
 
-AC_CHECK_FUNCS_ONCE(fork getpass)
-AM_CONDITIONAL(BUILD_PORT_ADAPTOR, test "x$ac_cv_func_fork" = "xyes")
+AC_CHECK_FUNCS_ONCE(getpass)
 
 dnl ----------------------------------------------------------------------------
 
@@ -174,7 +173,6 @@ echo "   * Debug enabled:             $with_debug"
 echo "   * Warnings as failure:       $ac_cv_warnings_as_errors"
 echo "   * Memcached location:        $ac_with_memcached"
 echo "   * SASL support:              $sasl_support"
-echo "   * port_adaptor support:      $ac_cv_func_fork"
 echo ""
 echo "---"
 

@@ -18,12 +18,6 @@ ACLOCAL_AMFLAGS = -I m4 --force
 
 bin_PROGRAMS = vbucketmigrator
 
-if BUILD_PORT_ADAPTOR
-bin_PROGRAMS += port_adaptor
-endif
-
-port_adaptor_SOURCES = src/port_adaptor.c
-
 vbucketmigrator_SOURCES = src/binarymessage.h \
                           src/binarymessagepipe.cc src/binarymessagepipe.h \
                           src/config_helper.h \
