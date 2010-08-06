@@ -37,6 +37,15 @@ Move the responsibility for the buckets to the other servers
 
 Terminate if no progress happens for n seconds.
 
+=item -d host:port
+
+Send all vbuckets to this server instead of using a mapfile as specified
+with -m
+
+=item -v
+
+Increase the verbosity output
+
 =item -a auth
 
 Use SASL authentication to authenticate user "auth" to the memcached
