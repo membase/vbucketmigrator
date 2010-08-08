@@ -199,6 +199,7 @@ void Socket::close(void) {
 
     if (ai != NULL) {
         freeaddrinfo(ai);
+        ai = NULL;
     }
 }
 
