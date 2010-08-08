@@ -22,6 +22,8 @@
 #include <vector>
 #include <map>
 #include <list>
+#include <cstdlib>
+#include <signal.h>
 #include <event.h>
 #include <memcached/vbucket.h>
 
@@ -32,6 +34,7 @@
 using namespace std;
 
 static uint8_t verbosity(0);
+static unsigned int timeout = 0;
 
 static void usage(std::string binary) {
     ssize_t idx = binary.find_last_of("/\\");
@@ -50,7 +53,8 @@ static void usage(std::string binary) {
          << "\t             (Password should be provided on standard input)" << endl
          << "\t-d host:port Send all vbuckets to this server" << endl
          << "\t-v           Increase verbosity" << endl
-         << "\t-N name      Use a tap stream named \"name\"" << endl;
+         << "\t-N name      Use a tap stream named \"name\"" << endl
+         << "\t-T timeout   Terminate if nothing happend for timeout seconds" << endl;
     exit(EX_USAGE);
 }
 
@@ -180,6 +184,14 @@ extern "C" {
             pipe->abort();
         }
         pipe->updateEvent();
+        if (timeout != 0) {
+            alarm(timeout);
+        }
+    }
+
+    static void sigalarm_handler(int sig) {
+        (void)sig;
+        _Exit(EXIT_FAILURE);
     }
 }
 
@@ -267,7 +279,7 @@ int main(int argc, char **argv)
     string passwd;
     string name;
 
-    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:tv?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:tvT:?")) != EOF) {
         switch (cmd) {
         case 'A':
             tapAck = true;
@@ -330,11 +342,16 @@ int main(int argc, char **argv)
         case 'N':
             name.assign(optarg);
             break;
+        case 'T':
+            timeout = atoi(optarg);
+            break;
         case '?': /* FALLTHROUGH */
         default:
             usage(argv[0]);
         }
     }
+
+    signal(SIGALRM, sigalarm_handler);
 
     try {
         initialize_sockets();
@@ -471,6 +488,9 @@ int main(int argc, char **argv)
     upstream.setBucketmap(bucketMap);
     downstream.setUpstream(pipe);
 
+    if (timeout != 0) {
+        alarm(timeout);
+    }
     event_base_loop(evbase, 0);
 
     int ret = EX_OK;

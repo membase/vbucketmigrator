@@ -33,6 +33,10 @@ Use mapfile to map from a bucket id to a host id
 
 Move the responsibility for the buckets to the other servers
 
+=item -T n
+
+Terminate if no progress happens for n seconds.
+
 =item -a auth
 
 Use SASL authentication to authenticate user "auth" to the memcached
