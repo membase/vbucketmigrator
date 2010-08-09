@@ -69,6 +69,10 @@ class DownstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
     void messageReceived(BinaryMessage *msg) {
         upstream->sendMessage(msg);
+        if (verbosity > 1) {
+            std::cout << "Received message from downstream server: "
+                      << msg->toString() << std::endl;
+        }
     }
 
     void setUpstream(BinaryMessagePipe &up) {
@@ -105,6 +109,11 @@ private:
 class UpstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
     void messageReceived(BinaryMessage *msg) {
+        if (verbosity > 1) {
+            std::cout << "Received message from upstream server: "
+                      << msg->toString() << std::endl;
+        }
+
         map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
         if (msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_NOOP) {
             // Ignore NOOPs
