@@ -94,18 +94,20 @@ public:
 
 class TapRequestBinaryMessage : public BinaryMessage {
 public:
-    TapRequestBinaryMessage(std::vector<uint16_t> buckets, bool takeover, bool tapAck) :
+    TapRequestBinaryMessage(const std::string &name, std::vector<uint16_t> buckets,
+                            bool takeover, bool tapAck) :
         BinaryMessage()
     {
-        size = sizeof(data.tap_connect->bytes) + buckets.size() * 2 + 2;
+        size = sizeof(data.tap_connect->bytes) + buckets.size() * 2 + 2 + name.length();
         data.rawBytes = new char[size];
         data.req->request.magic = PROTOCOL_BINARY_REQ;
         data.req->request.opcode = PROTOCOL_BINARY_CMD_TAP_CONNECT;
-        data.req->request.keylen = 0;
+        data.req->request.keylen = ntohs(static_cast<uint16_t>(name.length()));
         data.req->request.extlen = 4;
         data.req->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
         data.req->request.vbucket = 0;
-        uint32_t bodylen = data.req->request.extlen + buckets.size() * 2 + 2;
+        uint32_t bodylen = data.req->request.extlen + buckets.size() * 2 + 2 +
+            name.length();
         data.req->request.bodylen = htonl(bodylen);;
         data.req->request.opaque = 0xcafecafe;
         data.req->request.cas = 0;
@@ -120,9 +122,14 @@ public:
         }
 
         data.tap_connect->message.body.flags = htonl(flags);
+        char *ptr = data.rawBytes + sizeof(data.tap_connect->bytes);
+
+        if (name.length() > 0) {
+            memcpy(ptr, name.c_str(), name.length());
+            ptr += name.length();
+        }
 
         // To avoid alignment problems we have to do this the hard way..
-        char *ptr = data.rawBytes + sizeof(data.tap_connect->bytes);
         uint16_t val = htons(static_cast<uint16_t>(buckets.size()));
         memcpy(ptr, &val, 2);
         ptr += 2;

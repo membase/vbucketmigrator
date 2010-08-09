@@ -48,4 +48,8 @@ echo "mypassword" | vbucketmigrator -a myuser [options]
 
 Try to use the tap ack protocol
 
+=item -N name
+
+Use a named tap stream
+
 =cut

@@ -49,7 +49,8 @@ static void usage(std::string binary) {
          << "\t-a auth      Try to authenticate <auth>" << endl
          << "\t             (Password should be provided on standard input)" << endl
          << "\t-d host:port Send all vbuckets to this server" << endl
-         << "\t-v           Increase verbosity" << endl;
+         << "\t-v           Increase verbosity" << endl
+         << "\t-N name      Use a tap stream named \"name\"" << endl;
     exit(EX_USAGE);
 }
 
@@ -264,8 +265,9 @@ int main(int argc, char **argv)
     bool tapAck = false;
     string auth;
     string passwd;
+    string name;
 
-    while ((cmd = getopt(argc, argv, "Aa:h:b:m:d:tv?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:tv?")) != EOF) {
         switch (cmd) {
         case 'A':
             tapAck = true;
@@ -324,6 +326,9 @@ int main(int argc, char **argv)
             break;
         case 'v':
             ++verbosity;
+            break;
+        case 'N':
+            name.assign(optarg);
             break;
         case '?': /* FALLTHROUGH */
         default:
@@ -461,7 +466,7 @@ int main(int argc, char **argv)
         }
     }
     sock.setNonBlocking();
-    pipe.sendMessage(new TapRequestBinaryMessage(buckets, takeover, tapAck));
+    pipe.sendMessage(new TapRequestBinaryMessage(name, buckets, takeover, tapAck));
     pipe.updateEvent();
     upstream.setBucketmap(bucketMap);
     downstream.setUpstream(pipe);
