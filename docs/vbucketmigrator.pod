@@ -44,5 +44,8 @@ yourself, you can always fall back to:
 
 echo "mypassword" | vbucketmigrator -a myuser [options]
 
+=item -A
+
+Try to use the tap ack protocol
 
 =cut

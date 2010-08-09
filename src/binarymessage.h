@@ -94,7 +94,7 @@ public:
 
 class TapRequestBinaryMessage : public BinaryMessage {
 public:
-    TapRequestBinaryMessage(std::vector<uint16_t> buckets, bool takeover) :
+    TapRequestBinaryMessage(std::vector<uint16_t> buckets, bool takeover, bool tapAck) :
         BinaryMessage()
     {
         size = sizeof(data.tap_connect->bytes) + buckets.size() * 2 + 2;
@@ -114,6 +114,11 @@ public:
         if (takeover) {
             flags |= TAP_CONNECT_FLAG_TAKEOVER_VBUCKETS;
         }
+
+        if (tapAck) {
+            flags |= TAP_CONNECT_SUPPORT_ACK;
+        }
+
         data.tap_connect->message.body.flags = htonl(flags);
 
         // To avoid alignment problems we have to do this the hard way..

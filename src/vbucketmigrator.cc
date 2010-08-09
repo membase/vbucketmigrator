@@ -42,6 +42,7 @@ static void usage(std::string binary) {
     cerr << "Usage: " << binary
          << " -h host:port -b # [-m mapfile|-d desthost:destport]" << endl
          << "\t-h host:port Connect to host:port" << endl
+         << "\t-A           Use TAP acks" << endl
          << "\t-t           Move buckets from a server to another server"<< endl
          << "\t-b #         Operate on bucket number #" << endl
          << "\t-m mapfile   The destination bucket map" << endl
@@ -251,11 +252,15 @@ int main(int argc, char **argv)
     string host;
     string destination;
     bool takeover = false;
+    bool tapAck = false;
     string auth;
     string passwd;
 
-    while ((cmd = getopt(argc, argv, "a:h:b:m:d:tv?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "Aa:h:b:m:d:tv?")) != EOF) {
         switch (cmd) {
+        case 'A':
+            tapAck = true;
+            break;
         case 'a':
 #ifdef ENABLE_SASL
             if (sasl_client_init(NULL) != SASL_OK) {
@@ -447,7 +452,7 @@ int main(int argc, char **argv)
         }
     }
     sock.setNonBlocking();
-    pipe.sendMessage(new TapRequestBinaryMessage(buckets, takeover));
+    pipe.sendMessage(new TapRequestBinaryMessage(buckets, takeover, tapAck));
     pipe.updateEvent();
     upstream.setBucketmap(bucketMap);
     downstream.setUpstream(pipe);
