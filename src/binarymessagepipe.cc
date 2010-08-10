@@ -165,6 +165,15 @@ void BinaryMessagePipe::updateEvent() {
     }
 }
 
+void BinaryMessagePipe::updateTimer(int timeout) {
+    if (timeout != 0) {
+        struct timeval tv = {timeout, 0};
+        timeout_set(&ev, event_timeout_handler, reinterpret_cast<void *>(this));
+        int evtimer_set_rv = timeout_add(&ev, &tv);
+        assert(evtimer_set_rv != -1);
+    }
+}
+
 #ifdef ENABLE_SASL
 extern "C" {
     static int get_username(void *context, int id, const char **result,

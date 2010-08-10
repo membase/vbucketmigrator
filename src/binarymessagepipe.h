@@ -22,6 +22,7 @@
 #include "mutex.h"
 #include "sockstream.h"
 
+#include <string>
 #include <queue>
 #include <event.h>
 
@@ -36,6 +37,7 @@ public:
 
 extern "C" {
     void event_handler(int fd, short which, void *arg);
+    void event_timeout_handler(int fd, short which, void *arg);
 }
 
 class BinaryMessagePipe {
@@ -82,14 +84,13 @@ public:
 
     void updateEvent();
 
-    void updateTimer(int timeout) {
-        if (timeout != 0) {
-            struct timeval tv = {timeout, 0};
-            int evtimer_set_rv = timeout_add(&ev, &tv);
-            assert(evtimer_set_rv != -1);
-        }
-    }
+    void updateTimer(int timeout);
 
+    std::string toString() const {
+        std::stringstream ss;
+        ss << "BinaryMessagePipe from " << sock.toString();
+        return ss.str();
+    }
 
 protected:
 

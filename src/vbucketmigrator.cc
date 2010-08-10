@@ -185,6 +185,15 @@ extern "C" {
         pipe->updateEvent();
         pipe->updateTimer(timeout);
     }
+
+    void event_timeout_handler(int fd, short which, void *arg) {
+        (void)fd; (void)which;
+        BinaryMessagePipe *pipe;
+        pipe = reinterpret_cast<BinaryMessagePipe*>(arg);
+
+        std::cerr << "Timed out on " << pipe->toString() << std::endl;
+        _Exit(EXIT_FAILURE);
+    }
 }
 
 static BinaryMessagePipe *getServer(int serverindex,
