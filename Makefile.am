@@ -17,6 +17,7 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 bin_PROGRAMS = vbucketmigrator
+noinst_PROGRAMS = moveit
 
 vbucketmigrator_SOURCES = src/binarymessage.h \
                           src/binarymessagepipe.cc src/binarymessagepipe.h \
@@ -39,6 +40,8 @@ if BUILD_DOCS
 man_MANS += \
             vbucketmigrator.1m
 endif
+
+moveit_SOURCES = src/moveit.c
 
 CLEANFILES= ${man_MANS}
 

@@ -36,6 +36,8 @@
 /stamp-h1
 Makefile
 Makefile.in
+moveit
+moveit.exe
 port_adaptor
 vbucketmigrator
 vbucketmigrator.exe
