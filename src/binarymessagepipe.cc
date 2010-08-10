@@ -159,18 +159,10 @@ void BinaryMessagePipe::updateEvent() {
         event_set(&ev, sock.getSocket(), new_flags, event_handler,
                   reinterpret_cast<void *>(this));
         event_base_set(base, &ev);
-        int event_add_rv = event_add(&ev, 0);
+        struct timeval tv = {timeout, 0};
+        int event_add_rv = event_add(&ev, doRead ? &tv : NULL);
         assert(event_add_rv != -1);
         flags = new_flags;
-    }
-}
-
-void BinaryMessagePipe::updateTimer(int timeout) {
-    if (timeout != 0) {
-        struct timeval tv = {timeout, 0};
-        timeout_set(&ev, event_timeout_handler, reinterpret_cast<void *>(this));
-        int evtimer_set_rv = timeout_add(&ev, &tv);
-        assert(evtimer_set_rv != -1);
     }
 }
 

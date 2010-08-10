@@ -37,13 +37,13 @@ public:
 
 extern "C" {
     void event_handler(int fd, short which, void *arg);
-    void event_timeout_handler(int fd, short which, void *arg);
 }
 
 class BinaryMessagePipe {
 public:
-    BinaryMessagePipe(Socket &s, BinaryMessagePipeCallback &cb, struct event_base *b) :
-        sock(s), callback(cb), msg(NULL), avail(0), flags(0), base(b),
+    BinaryMessagePipe(Socket &s, BinaryMessagePipeCallback &cb, struct event_base *b,
+                      int tmout) :
+        sock(s), callback(cb), msg(NULL), avail(0), flags(0), base(b), timeout(tmout),
         sendptr(NULL), sendlen(0), closed(false), doRead(true)
     {
         updateEvent();
@@ -84,11 +84,10 @@ public:
 
     void updateEvent();
 
-    void updateTimer(int timeout);
-
     std::string toString() const {
         std::stringstream ss;
-        ss << "BinaryMessagePipe from " << sock.toString();
+        ss << "BinaryMessagePipe from " << sock.toString()
+           << " on fd " << sock.getSocket();
         return ss.str();
     }
 
@@ -120,6 +119,7 @@ protected:
     short flags;
     struct event_base *base;
     struct event ev;
+    int timeout;
 
     std::queue<BinaryMessage *> queue;
     uint8_t *sendptr;

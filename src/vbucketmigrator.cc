@@ -173,9 +173,14 @@ private:
 
 extern "C" {
     void event_handler(int fd, short which, void *arg) {
-        (void)fd; (void)which;
+        (void)fd;
         BinaryMessagePipe *pipe;
         pipe = reinterpret_cast<BinaryMessagePipe*>(arg);
+
+        if (which == EV_TIMEOUT) {
+            std::cerr << "Timed out on " << pipe->toString() << std::endl;
+            _Exit(EXIT_FAILURE);
+        }
 
         try {
             pipe->step(which);
@@ -184,16 +189,6 @@ extern "C" {
             pipe->abort();
         }
         pipe->updateEvent();
-        pipe->updateTimer(timeout);
-    }
-
-    void event_timeout_handler(int fd, short which, void *arg) {
-        (void)fd; (void)which;
-        BinaryMessagePipe *pipe;
-        pipe = reinterpret_cast<BinaryMessagePipe*>(arg);
-
-        std::cerr << "Timed out on " << pipe->toString() << std::endl;
-        _Exit(EXIT_FAILURE);
     }
 }
 
@@ -223,7 +218,7 @@ static BinaryMessagePipe *getServer(int serverindex,
                  << " for " << vbucketId << endl;
         }
         sock->connect();
-        ret = new BinaryMessagePipe(*sock, cb, b);
+        ret = new BinaryMessagePipe(*sock, cb, b, timeout);
         if (auth.length() > 0) {
             if (verbosity) {
                 cout << "Authenticating towards: " << *sock << endl;
@@ -475,7 +470,7 @@ int main(int argc, char **argv)
     }
     Socket sock(host);
     sock.connect();
-    BinaryMessagePipe pipe(sock, upstream, evbase);
+    BinaryMessagePipe pipe(sock, upstream, evbase, timeout);
     if (auth.length() > 0) {
         if (verbosity) {
             cout << "Authenticating towards: " << sock << endl;
