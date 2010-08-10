@@ -272,6 +272,7 @@ int main(int argc, char **argv)
     string destination;
     bool takeover = false;
     bool tapAck = false;
+    bool passwdSupplied = false;
     string auth;
     string passwd;
     string name;
@@ -286,6 +287,7 @@ int main(int argc, char **argv)
             break;
         case 'p':
             passwd.assign(optarg);
+            passwdSupplied = true;
             break;
         case 'm':
             if (mapfile != NULL) {
@@ -332,7 +334,7 @@ int main(int argc, char **argv)
             return EX_OSERR;
         }
         atexit(sasl_done);
-        if (passwd.empty()) {
+        if (!passwdSupplied) {
             if (isatty(fileno(stdin))) {
                 char *pw = getpass("Enter password: ");
                 if (pw == NULL) {
