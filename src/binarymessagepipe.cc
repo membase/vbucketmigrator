@@ -146,18 +146,21 @@ void BinaryMessagePipe::updateEvent() {
     }
 
     if (closed) {
-        assert(event_del(&ev) != -1);
+        int event_del_rv = event_del(&ev);
+        assert(event_del_rv != -1);
         return;
     }
 
     if (new_flags != flags) {
         if (flags != 0) {
-            assert(event_del(&ev) != -1);
+            int event_del_rv = event_del(&ev);
+            assert(event_del_rv != -1);
         }
         event_set(&ev, sock.getSocket(), new_flags, event_handler,
                   reinterpret_cast<void *>(this));
         event_base_set(base, &ev);
-        assert(event_add(&ev, 0) != -1);
+        int event_add_rv = event_add(&ev, 0);
+        assert(event_add_rv != -1);
         flags = new_flags;
     }
 }
