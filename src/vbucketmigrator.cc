@@ -23,7 +23,6 @@
 #include <map>
 #include <list>
 #include <cstdlib>
-#include <signal.h>
 #include <event.h>
 #include <memcached/vbucket.h>
 
@@ -184,14 +183,7 @@ extern "C" {
             pipe->abort();
         }
         pipe->updateEvent();
-        if (timeout != 0) {
-            alarm(timeout);
-        }
-    }
-
-    static void sigalarm_handler(int sig) {
-        (void)sig;
-        _Exit(EXIT_FAILURE);
+        pipe->updateTimer(timeout);
     }
 }
 
@@ -351,8 +343,6 @@ int main(int argc, char **argv)
         }
     }
 
-    signal(SIGALRM, sigalarm_handler);
-
     try {
         initialize_sockets();
     } catch (std::exception& e) {
@@ -488,9 +478,6 @@ int main(int argc, char **argv)
     upstream.setBucketmap(bucketMap);
     downstream.setUpstream(pipe);
 
-    if (timeout != 0) {
-        alarm(timeout);
-    }
     event_base_loop(evbase, 0);
 
     int ret = EX_OK;

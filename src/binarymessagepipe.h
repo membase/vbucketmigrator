@@ -82,6 +82,14 @@ public:
 
     void updateEvent();
 
+    void updateTimer(int timeout) {
+        if (timeout != 0) {
+            struct timeval tv = {timeout, 0};
+            int evtimer_set_rv = timeout_add(&ev, &tv);
+            assert(evtimer_set_rv != -1);
+        }
+    }
+
 
 protected:
 
