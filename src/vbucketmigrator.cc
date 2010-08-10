@@ -49,6 +49,7 @@ static void usage(std::string binary) {
          << "\t-b #         Operate on bucket number #" << endl
          << "\t-m mapfile   The destination bucket map" << endl
          << "\t-a auth      Try to authenticate <auth>" << endl
+         << "\t-p passwd    Specify password for <auth> (unsafe)" << endl
          << "\t             (Password should be provided on standard input)" << endl
          << "\t-d host:port Send all vbuckets to this server" << endl
          << "\t-v           Increase verbosity" << endl
@@ -280,40 +281,17 @@ int main(int argc, char **argv)
     string passwd;
     string name;
 
-    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:tvT:?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:p:tvT:?")) != EOF) {
         switch (cmd) {
         case 'A':
             tapAck = true;
             break;
         case 'a':
-#ifdef ENABLE_SASL
-            if (sasl_client_init(NULL) != SASL_OK) {
-                fprintf(stderr, "Failed to initialize sasl library!\n");
-                return EX_OSERR;
-            }
-            atexit(sasl_done);
             auth.assign(optarg);
-            if (isatty(fileno(stdin))) {
-                char *pw = getpass("Enter password: ");
-                if (pw == NULL) {
-                    return EXIT_FAILURE;
-                }
-                passwd.assign(pw);
-            } else {
-                char buffer[1024];
-                if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
-                    cout << "Missing password" << endl;
-                    return EXIT_FAILURE;
-                }
-                passwd.assign(buffer);
-                ssize_t p = passwd.find_first_of("\r\n");
-                passwd.resize(p);
-            }
             break;
-#else
-            fprintf(stderr, "Not built with SASL support\n");
-            return EX_USAGE;
-#endif
+        case 'p':
+            passwd.assign(optarg);
+            break;
         case 'm':
             if (mapfile != NULL) {
                 cerr << "Multiple mapfiles is not supported" << endl;
@@ -350,6 +328,37 @@ int main(int argc, char **argv)
         default:
             usage(argv[0]);
         }
+    }
+
+    if (!auth.empty()) {
+#ifdef ENABLE_SASL
+        if (sasl_client_init(NULL) != SASL_OK) {
+            fprintf(stderr, "Failed to initialize sasl library!\n");
+            return EX_OSERR;
+        }
+        atexit(sasl_done);
+        if (passwd.empty()) {
+            if (isatty(fileno(stdin))) {
+                char *pw = getpass("Enter password: ");
+                if (pw == NULL) {
+                    return EXIT_FAILURE;
+                }
+                passwd.assign(pw);
+            } else {
+                char buffer[1024];
+                if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+                    cout << "Missing password" << endl;
+                    return EXIT_FAILURE;
+                }
+                passwd.assign(buffer);
+                ssize_t p = passwd.find_first_of("\r\n");
+                passwd.resize(p);
+            }
+        }
+#else
+        fprintf(stderr, "Not built with SASL support\n");
+        return EX_USAGE;
+#endif
     }
 
     try {
