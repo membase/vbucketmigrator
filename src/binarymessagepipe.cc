@@ -160,7 +160,7 @@ void BinaryMessagePipe::updateEvent() {
                   reinterpret_cast<void *>(this));
         event_base_set(base, &ev);
         struct timeval tv = {timeout, 0};
-        int event_add_rv = event_add(&ev, doRead ? &tv : NULL);
+        int event_add_rv = event_add(&ev, (doRead && timeout > 0) ? &tv : NULL);
         assert(event_add_rv != -1);
         flags = new_flags;
     }
