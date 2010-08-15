@@ -85,10 +85,12 @@ public:
     }
 
     void messageSent(BinaryMessage *msg) {
-        if (msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_TAP_VBUCKET_SET) {
+        if (msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_TAP_VBUCKET_SET && (msg->size - sizeof(msg->data.vs->bytes)) >= sizeof(vbucket_state_t)) {
             // test the state thing..
-            uint16_t v = msg->data.vs->message.body.tap.flags;
-            vbucket_state_t state = static_cast<vbucket_state_t>(ntohs(v));
+            vbucket_state_t state;
+            memcpy(&state, msg->data.rawBytes + sizeof(msg->data.vs->bytes),
+                   sizeof(state));
+            state = static_cast<vbucket_state_t>(ntohl(state));
             if (state == pending) {
                 cout << "Starting to move bucket "
                      << msg->getVBucketId()
