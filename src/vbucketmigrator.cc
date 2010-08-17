@@ -24,6 +24,7 @@
 #include <list>
 #include <cstdlib>
 #include <event.h>
+#include <pthread.h>
 #include <memcached/vbucket.h>
 
 #include "sockstream.h"
