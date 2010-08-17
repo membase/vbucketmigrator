@@ -195,7 +195,7 @@ extern "C" {
         pipe->updateEvent();
     }
 
-    void timer_handler(int fd, short which, void *arg) {
+    static void timer_handler(int fd, short which, void *arg) {
         (void)fd;
         (void)which;
         (void)arg;
