@@ -57,6 +57,8 @@ vbucketmigrator_SOURCES += src/mutex_pthread.cc
 endif
 endif
 
+vbucketmigrator_LDADD += -lpthread
+
 check_PROGRAMS=
 TESTS=${check_PROGRAMS}
 
