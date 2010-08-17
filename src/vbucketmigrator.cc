@@ -34,6 +34,8 @@ using namespace std;
 
 static uint8_t verbosity(0);
 static unsigned int timeout = 0;
+static int exit_code = EX_OK;
+static struct event timerev;
 
 static void usage(std::string binary) {
     ssize_t idx = binary.find_last_of("/\\");
@@ -192,6 +194,17 @@ extern "C" {
         }
         pipe->updateEvent();
     }
+
+    void timer_handler(int fd, short which, void *arg) {
+        (void)fd;
+        (void)which;
+        (void)arg;
+
+        // reschedule
+        struct timeval tv = {1, 0};
+        int event_add_rv = event_add(&timerev, &tv);
+        assert(event_add_rv != -1);
+    }
 }
 
 static BinaryMessagePipe *getServer(int serverindex,
@@ -264,6 +277,37 @@ static char *getpass(const char *prompt)
     return buffer;
 }
 #endif
+
+static void* check_stdin_thread(void* arg)
+{
+    pthread_detach(pthread_self());
+    struct event_base *evbase = (struct event_base*)arg;
+
+    // Ask for a periodic timer to fire so we *can* actually break out
+    // if something happens.
+    evtimer_set(&timerev, timer_handler, NULL);
+    event_base_set(evbase, &timerev);
+    struct timeval tv = {1, 0};
+    int event_add_rv = event_add(&timerev, &tv);
+    assert(event_add_rv != -1);
+
+    while (!feof(stdin)) {
+        getc(stdin);
+    }
+
+    fprintf(stderr, "EOF on stdin.  Exiting\n");
+    exit_code = EX_OSERR;
+    event_base_loopbreak(evbase);
+    return NULL;
+}
+
+static void stdin_check(struct event_base *evbase) {
+    pthread_t t;
+    if (pthread_create(&t, NULL, check_stdin_thread, (void*)evbase) != 0) {
+        perror("couldn't create stdin checking thread.");
+        exit(EX_OSERR);
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -406,6 +450,8 @@ int main(int argc, char **argv)
         return EX_IOERR;
     }
 
+    stdin_check(evbase);
+
     UpstreamBinaryMessagePipeCallback upstream;
     DownstreamBinaryMessagePipeCallback downstream;
 
@@ -497,6 +543,5 @@ int main(int argc, char **argv)
 
     event_base_loop(evbase, 0);
 
-    int ret = EX_OK;
-    return ret;
+    return exit_code;
 }
