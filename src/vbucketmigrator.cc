@@ -294,6 +294,8 @@ static char *getpass(const char *prompt)
 }
 #endif
 
+extern "C" {
+
 static void* check_stdin_thread(void* arg)
 {
     pthread_detach(pthread_self());
@@ -324,6 +326,8 @@ static void stdin_check(struct event_base *evbase) {
         perror("couldn't create stdin checking thread.");
         exit(EX_OSERR);
     }
+}
+
 }
 
 int main(int argc, char **argv)
