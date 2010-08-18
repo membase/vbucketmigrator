@@ -33,6 +33,7 @@ public:
     virtual void messageSent(BinaryMessage *msg) { (void)msg; };
     virtual void abort() = 0;
     virtual void shutdown() {};
+    void markcomplete();
 };
 
 extern "C" {

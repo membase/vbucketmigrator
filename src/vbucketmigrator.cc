@@ -37,6 +37,7 @@ static uint8_t verbosity(0);
 static unsigned int timeout = 0;
 static int exit_code = EX_OK;
 static struct event timerev;
+static bool evtimer_active(false);
 
 static void usage(std::string binary) {
     ssize_t idx = binary.find_last_of("/\\");
@@ -71,6 +72,13 @@ static uint16_t str2bucketid(const char *str)
     }
 
     return static_cast<uint16_t>(val);
+}
+
+void BinaryMessagePipeCallback::markcomplete() {
+    if (evtimer_active) {
+        evtimer_active = false;
+        evtimer_del(&timerev);
+    }
 }
 
 class DownstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
@@ -110,6 +118,11 @@ public:
 
     void abort() {
         // send a message upstream that we're aborting this tap stream
+        markcomplete();
+    }
+
+    void shutdown() {
+        markcomplete();
     }
 
 private:
@@ -159,6 +172,7 @@ public:
                 (*iter)->abort();
             }
         }
+        markcomplete();
     }
 
     void shutdown() {
@@ -170,6 +184,7 @@ public:
                 (*iter)->updateEvent();
             }
         }
+        markcomplete();
     }
 
 private:
@@ -290,6 +305,7 @@ static void* check_stdin_thread(void* arg)
     event_base_set(evbase, &timerev);
     struct timeval tv = {1, 0};
     int event_add_rv = event_add(&timerev, &tv);
+    evtimer_active = true;
     assert(event_add_rv != -1);
 
     while (!feof(stdin)) {
