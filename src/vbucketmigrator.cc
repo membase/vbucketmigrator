@@ -298,7 +298,6 @@ extern "C" {
 
 static void* check_stdin_thread(void* arg)
 {
-    pthread_detach(pthread_self());
     struct event_base *evbase = (struct event_base*)arg;
 
     // Ask for a periodic timer to fire so we *can* actually break out
@@ -322,7 +321,12 @@ static void* check_stdin_thread(void* arg)
 
 static void stdin_check(struct event_base *evbase) {
     pthread_t t;
-    if (pthread_create(&t, NULL, check_stdin_thread, (void*)evbase) != 0) {
+    pthread_attr_t attr;
+
+    if (pthread_attr_init(&attr) != 0 ||
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0 ||
+        pthread_create(&t, &attr, check_stdin_thread, (void*)evbase) != 0)
+    {
         perror("couldn't create stdin checking thread.");
         exit(EX_OSERR);
     }
