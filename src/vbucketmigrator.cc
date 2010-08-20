@@ -207,6 +207,7 @@ extern "C" {
         } catch (std::exception& e) {
             cerr << e.what() << std::endl;
             pipe->abort();
+            exit_code = EX_IOERR;
         }
         pipe->updateEvent();
     }
