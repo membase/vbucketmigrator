@@ -156,11 +156,12 @@ void BinaryMessagePipe::updateEvent() {
             int event_del_rv = event_del(&ev);
             assert(event_del_rv != -1);
         }
+        bool has_io = (new_flags & ~EV_PERSIST);
         event_set(&ev, sock.getSocket(), new_flags, event_handler,
                   reinterpret_cast<void *>(this));
         event_base_set(base, &ev);
         struct timeval tv = {timeout, 0};
-        int event_add_rv = event_add(&ev, (doRead && timeout > 0) ? &tv : NULL);
+        int event_add_rv = event_add(&ev, (has_io && timeout > 0) ? &tv : NULL);
         assert(event_add_rv != -1);
         flags = new_flags;
     }
