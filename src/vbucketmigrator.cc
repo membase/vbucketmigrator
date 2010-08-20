@@ -39,6 +39,8 @@ static int exit_code = EX_OK;
 static struct event timerev;
 static bool evtimer_active(false);
 
+static size_t packets(0);
+
 static void usage(std::string binary) {
     ssize_t idx = binary.find_last_of("/\\");
     if (idx != -1) {
@@ -202,6 +204,8 @@ extern "C" {
             _Exit(EXIT_FAILURE);
         }
 
+        ++packets;
+
         try {
             pipe->step(which);
         } catch (std::exception& e) {
@@ -216,6 +220,25 @@ extern "C" {
         (void)fd;
         (void)which;
         (void)arg;
+
+        // A hack follows.
+        static size_t previousPackets(0);
+        static unsigned int numSame(0);
+
+        if (previousPackets == packets) {
+            if (timeout > 0 && ++numSame > timeout + 3) {
+                // numSame == number of seconds the packet counter
+                // hasn't moved, so this is an alternate view on
+                // timeouts.  Added 3 to the timeout just to make this
+                // more of a safety net and less of a race against the
+                // normal timeout.
+                std::cerr << "Safety net timed out" << std::endl;
+                _Exit(EXIT_FAILURE);
+            }
+        } else {
+            numSame = 0;
+            previousPackets = packets;
+        }
 
         // reschedule
         struct timeval tv = {1, 0};
