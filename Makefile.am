@@ -18,6 +18,7 @@ ACLOCAL_AMFLAGS = -I m4 --force
 
 bin_PROGRAMS = vbucketmigrator
 noinst_PROGRAMS = moveit
+EXTRA_DIST = docs LICENSE
 
 vbucketmigrator_SOURCES = src/binarymessage.h \
                           src/binarymessagepipe.cc src/binarymessagepipe.h \
