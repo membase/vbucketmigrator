@@ -391,15 +391,6 @@ static void* check_stdin_thread(void* arg)
 {
     struct event_base *evbase = (struct event_base*)arg;
 
-    // Ask for a periodic timer to fire so we *can* actually break out
-    // if something happens.
-    evtimer_set(&timerev, timer_handler, NULL);
-    event_base_set(evbase, &timerev);
-    struct timeval tv = {1, 0};
-    int event_add_rv = event_add(&timerev, &tv);
-    evtimer_active = true;
-    assert(event_add_rv != -1);
-
     while (!feof(stdin)) {
         getc(stdin);
     }
@@ -413,6 +404,15 @@ static void* check_stdin_thread(void* arg)
 static void stdin_check(struct event_base *evbase) {
     pthread_t t;
     pthread_attr_t attr;
+
+    // Ask for a periodic timer to fire so we *can* actually break out
+    // if something happens.
+    evtimer_set(&timerev, timer_handler, NULL);
+    event_base_set(evbase, &timerev);
+    struct timeval tv = {1, 0};
+    int event_add_rv = event_add(&timerev, &tv);
+    evtimer_active = true;
+    assert(event_add_rv != -1);
 
     if (pthread_attr_init(&attr) != 0 ||
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0 ||
