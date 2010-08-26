@@ -63,8 +63,13 @@ public:
 
     void authenticate(const std::string &authname, const std::string &password);
 
-    void shutdownInput(void) {
+    void plugInput(void) {
         doRead = false;
+        updateEvent();
+    }
+
+    void unPlugInput(void) {
+        doRead = true;
         updateEvent();
     }
 

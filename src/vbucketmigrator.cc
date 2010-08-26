@@ -83,21 +83,66 @@ void BinaryMessagePipeCallback::markcomplete() {
     }
 }
 
+const int PENDING_SEND_LO_WAT = 128;
+const int PENDING_SEND_HI_WAT = 512;
+
+class UpstreamController {
+public:
+    UpstreamController() :
+        upstream(0), pendingSendCount(0),
+        closed(false), inputPlugged(false) {}
+    void sendUpstreamMessage(BinaryMessage *msg) {
+        upstream->sendMessage(msg);
+    }
+    void incrementPendingDownstream() {
+        if (!upstream)
+            return;
+
+        pendingSendCount++;
+        if (!inputPlugged && pendingSendCount > PENDING_SEND_HI_WAT) {
+            upstream->plugInput();
+            inputPlugged = true;
+        }
+    }
+    void decrementPendingDownstream() {
+        if (!upstream)
+            return;
+
+        pendingSendCount--;
+        if (inputPlugged && pendingSendCount < PENDING_SEND_LO_WAT && !closed) {
+            upstream->unPlugInput();
+            inputPlugged = false;
+        }
+    }
+    void close() {
+        closed = true;
+    }
+    void setUpstream(BinaryMessagePipe *_upstream) {
+        upstream = _upstream;
+    }
+private:
+    BinaryMessagePipe *upstream;
+    int pendingSendCount;
+    bool closed;
+    bool inputPlugged;
+};
+
 class DownstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
+    DownstreamBinaryMessagePipeCallback(UpstreamController *_upstream) :
+        upstream(_upstream) {}
+
     void messageReceived(BinaryMessage *msg) {
-        upstream->sendMessage(msg);
+        upstream->sendUpstreamMessage(msg);
         if (verbosity > 1) {
             std::cout << "Received message from downstream server: "
                       << msg->toString() << std::endl;
         }
     }
 
-    void setUpstream(BinaryMessagePipe &up) {
-        upstream = &up;
-    }
-
     void messageSent(BinaryMessage *msg) {
+        upstream->decrementPendingDownstream();
+
         if (msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_TAP_VBUCKET_SET && (msg->size - sizeof(msg->data.vs->bytes)) >= sizeof(vbucket_state_t)) {
             // test the state thing..
             vbucket_state_t state;
@@ -126,13 +171,16 @@ public:
     void shutdown() {
         markcomplete();
     }
-
 private:
-    BinaryMessagePipe *upstream;
+    UpstreamController *upstream;
 };
 
 class UpstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
+    UpstreamBinaryMessagePipeCallback(UpstreamController *_controller) :
+        BinaryMessagePipeCallback(),
+        controller(_controller) {}
+
     void messageReceived(BinaryMessage *msg) {
         if (verbosity > 1) {
             std::cout << "Received message from upstream server: "
@@ -157,6 +205,7 @@ public:
             for (iter = bucketIter->second.begin();
                  iter != bucketIter->second.end();
                  iter++) {
+                controller->incrementPendingDownstream();
                 (*iter)->sendMessage(msg);
             }
         }
@@ -164,6 +213,11 @@ public:
 
     void setBucketmap(map<uint16_t, list<BinaryMessagePipe*> > &m) {
         bucketMap = &m;
+    }
+
+    void completeMe() {
+        markcomplete();
+        controller->close();
     }
 
     void abort() {
@@ -174,7 +228,7 @@ public:
                 (*iter)->abort();
             }
         }
-        markcomplete();
+        completeMe();
     }
 
     void shutdown() {
@@ -182,14 +236,15 @@ public:
         for (bucketIter = bucketMap->begin(); bucketIter != bucketMap->end(); ++bucketIter) {
             list<BinaryMessagePipe*>::iterator iter;
             for (iter = bucketIter->second.begin(); iter != bucketIter->second.end(); ++iter) {
-                (*iter)->shutdownInput();
+                (*iter)->plugInput();
                 (*iter)->updateEvent();
             }
         }
-        markcomplete();
+        completeMe();
     }
 
 private:
+    UpstreamController *controller;
     map<uint16_t, list<BinaryMessagePipe*> > *bucketMap;
 };
 
@@ -501,8 +556,9 @@ int main(int argc, char **argv)
 
     stdin_check(evbase);
 
-    UpstreamBinaryMessagePipeCallback upstream;
-    DownstreamBinaryMessagePipeCallback downstream;
+    UpstreamController controller;
+    UpstreamBinaryMessagePipeCallback upstream(&controller);
+    DownstreamBinaryMessagePipeCallback downstream(&controller);
 
     map<int, BinaryMessagePipe*> servermap;
     map<uint16_t, list<BinaryMessagePipe*> > bucketMap;
@@ -588,7 +644,7 @@ int main(int argc, char **argv)
     pipe.sendMessage(new TapRequestBinaryMessage(name, buckets, takeover, tapAck));
     pipe.updateEvent();
     upstream.setBucketmap(bucketMap);
-    downstream.setUpstream(pipe);
+    controller.setUpstream(&pipe);
 
     event_base_loop(evbase, 0);
 
