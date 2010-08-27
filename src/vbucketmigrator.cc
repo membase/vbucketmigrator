@@ -31,6 +31,10 @@
 #include "binarymessagepipe.h"
 #include <libvbucket/vbucket.h>
 
+#ifndef EX_SOFTWARE
+#define EX_SOFTWARE 70
+#endif
+
 using namespace std;
 
 static uint8_t verbosity(0);
