@@ -65,7 +65,8 @@ static void usage(std::string binary) {
          << "\t-d host:port Send all vbuckets to this server" << endl
          << "\t-v           Increase verbosity" << endl
          << "\t-N name      Use a tap stream named \"name\"" << endl
-         << "\t-T timeout   Terminate if nothing happened for timeout seconds" << endl;
+         << "\t-T timeout   Terminate if nothing happened for timeout seconds" << endl
+         << "\t-e           Run as an Erlang port" << endl;
     exit(EX_USAGE);
 }
 
@@ -434,11 +435,12 @@ int main(int argc, char **argv)
     bool takeover = false;
     bool tapAck = false;
     bool passwdSupplied = false;
+    bool erlang = false;
     string auth;
     string passwd;
     string name;
 
-    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:p:tvT:?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:p:tvT:e?")) != EOF) {
         switch (cmd) {
         case 'A':
             tapAck = true;
@@ -481,6 +483,9 @@ int main(int argc, char **argv)
             break;
         case 'T':
             timeout = atoi(optarg);
+            break;
+        case 'e':
+            erlang = true;
             break;
         case '?': /* FALLTHROUGH */
         default:
@@ -565,7 +570,9 @@ int main(int argc, char **argv)
         return EX_IOERR;
     }
 
-    stdin_check(evbase);
+    if (erlang) {
+        stdin_check(evbase);
+    }
 
     UpstreamController controller;
     UpstreamBinaryMessagePipeCallback upstream(&controller);
