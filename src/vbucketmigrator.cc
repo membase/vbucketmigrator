@@ -65,7 +65,7 @@ static void usage(std::string binary) {
          << "\t-d host:port Send all vbuckets to this server" << endl
          << "\t-v           Increase verbosity" << endl
          << "\t-N name      Use a tap stream named \"name\"" << endl
-         << "\t-T timeout   Terminate if nothing happend for timeout seconds" << endl;
+         << "\t-T timeout   Terminate if nothing happened for timeout seconds" << endl;
     exit(EX_USAGE);
 }
 
