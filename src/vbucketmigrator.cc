@@ -120,6 +120,11 @@ public:
     void setUpstream(BinaryMessagePipe *_upstream) {
         upstream = _upstream;
     }
+
+    int getPendingSendCount() {
+        return pendingSendCount;
+    }
+
 private:
     BinaryMessagePipe *upstream;
     int pendingSendCount;
@@ -647,6 +652,12 @@ int main(int argc, char **argv)
     controller.setUpstream(&pipe);
 
     event_base_loop(evbase, 0);
+
+    if (controller.getPendingSendCount() != 0) {
+        cerr << "Had " << controller.getPendingSendCount()
+             << " pending messages at exit." << endl;
+        exit_code = exit_code == 0 ? EX_SOFTWARE : exit_code;
+    }
 
     return exit_code;
 }
