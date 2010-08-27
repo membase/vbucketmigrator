@@ -38,6 +38,7 @@ static unsigned int timeout = 0;
 static int exit_code = EX_OK;
 static struct event timerev;
 static bool evtimer_active(false);
+static size_t moved = 0;
 
 static size_t packets(0);
 
@@ -160,6 +161,7 @@ public:
                      << endl;
                 cout.flush();
             } else if (state == active) {
+                ++moved;
                 cout << "Bucket "
                      << msg->getVBucketId()
                      << " moved to the next server" << endl;
@@ -652,6 +654,12 @@ int main(int argc, char **argv)
     controller.setUpstream(&pipe);
 
     event_base_loop(evbase, 0);
+
+    if (takeover && moved != buckets.size()) {
+        cerr << "Did not move enough vbuckets in takeover: "
+             << moved << "/" << buckets.size() << endl;
+        exit_code = exit_code == 0 ? EX_SOFTWARE : exit_code;
+    }
 
     if (controller.getPendingSendCount() != 0) {
         cerr << "Had " << controller.getPendingSendCount()
