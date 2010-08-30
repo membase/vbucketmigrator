@@ -60,8 +60,6 @@ static void usage(std::string binary) {
          << "\t-b #         Operate on bucket number #" << endl
          << "\t-m mapfile   The destination bucket map" << endl
          << "\t-a auth      Try to authenticate <auth>" << endl
-         << "\t-p passwd    Specify password for <auth> (unsafe)" << endl
-         << "\t             (Password should be provided on standard input)" << endl
          << "\t-d host:port Send all vbuckets to this server" << endl
          << "\t-v           Increase verbosity" << endl
          << "\t-N name      Use a tap stream named \"name\"" << endl
@@ -434,23 +432,18 @@ int main(int argc, char **argv)
     string destination;
     bool takeover = false;
     bool tapAck = false;
-    bool passwdSupplied = false;
     bool erlang = false;
     string auth;
     string passwd;
     string name;
 
-    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:p:tvT:e?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:tvT:e?")) != EOF) {
         switch (cmd) {
         case 'A':
             tapAck = true;
             break;
         case 'a':
             auth.assign(optarg);
-            break;
-        case 'p':
-            passwd.assign(optarg);
-            passwdSupplied = true;
             break;
         case 'm':
             if (mapfile != NULL) {
@@ -500,23 +493,21 @@ int main(int argc, char **argv)
             return EX_OSERR;
         }
         atexit(sasl_done);
-        if (!passwdSupplied) {
-            if (isatty(fileno(stdin))) {
-                char *pw = getpass("Enter password: ");
-                if (pw == NULL) {
-                    return EXIT_FAILURE;
-                }
-                passwd.assign(pw);
-            } else {
-                char buffer[1024];
-                if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
-                    cout << "Missing password" << endl;
-                    return EXIT_FAILURE;
-                }
-                passwd.assign(buffer);
-                ssize_t p = passwd.find_first_of("\r\n");
-                passwd.resize(p);
+        if (isatty(fileno(stdin))) {
+            char *pw = getpass("Enter password: ");
+            if (pw == NULL) {
+                return EXIT_FAILURE;
             }
+            passwd.assign(pw);
+        } else {
+            char buffer[1024];
+            if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+                cout << "Missing password" << endl;
+                return EXIT_FAILURE;
+            }
+            passwd.assign(buffer);
+            ssize_t p = passwd.find_first_of("\r\n");
+            passwd.resize(p);
         }
 #else
         fprintf(stderr, "Not built with SASL support\n");
