@@ -29,6 +29,10 @@ Operate on the specified bucket id
 
 Use mapfile to map from a bucket id to a host id
 
+=item -e
+
+Run as an Erlang port (terminate if stdin is closed)
+
 =item -t
 
 Move the responsibility for the buckets to the other servers
