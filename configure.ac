@@ -22,7 +22,7 @@ AM_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_DISABLE_STATIC
 
-PANDORA_CANONICAL_TARGET(less-warnings, warnings-always-on, require-cxx,
+PANDORA_CANONICAL_TARGET(less-warnings, require-cxx,
                          force-gcc42)
 PANDORA_REQUIRE_LIBEVENT
 PANDORA_REQUIRE_LIBVBUCKET
