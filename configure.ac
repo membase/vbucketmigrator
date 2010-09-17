@@ -25,8 +25,6 @@ AC_DISABLE_STATIC
 PANDORA_CANONICAL_TARGET(less-warnings, require-cxx,
                          force-gcc42)
 
-ac_cv_warnings_as_errors=no
-
 PANDORA_REQUIRE_LIBEVENT
 PANDORA_REQUIRE_LIBVBUCKET
 

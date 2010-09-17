@@ -28,11 +28,12 @@ AC_DEFUN([PANDORA_WARNINGS],[
   ])
 
   AC_REQUIRE([PANDORA_BUILDING_FROM_VC])
-  m4_if(PW_WARN_ALWAYS_ON, [yes],
-    [ac_cv_warnings_as_errors=yes],
-    AS_IF([test "$ac_cv_building_from_vc" = "yes"],
-          [ac_cv_warnings_as_errors=yes],
-          [ac_cv_warnings_as_errors=no]))
+
+dnl  m4_if(PW_WARN_ALWAYS_ON, [yes],
+dnl    [ac_cv_warnings_as_errors=yes],
+dnl    AS_IF([test "$ac_cv_building_from_vc" = "yes"],
+dnl          [ac_cv_warnings_as_errors=yes],
+dnl          [ac_cv_warnings_as_errors=no]))
 
   AC_ARG_ENABLE([profiling],
       [AS_HELP_STRING([--enable-profiling],
