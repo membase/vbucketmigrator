@@ -19,8 +19,6 @@
 
 // The intention of this file is to avoid cluttering the code with #ifdefs
 
-#include <stdint.h>
-
 #if ((defined (__SUNPRO_C) || defined(__SUNPRO_CC)) || defined __GNUC__)
 #define EXPORT_FUNCTION __attribute__ ((visibility("default")))
 #else
@@ -111,5 +109,7 @@ extern void initialize_sockets(void);
 #ifndef EX_OK
 #define EX_OK EXIT_SUCCESS
 #endif
+
+#include <stdint.h>
 
 #endif
