@@ -19,6 +19,7 @@
 
 // The intention of this file is to avoid cluttering the code with #ifdefs
 
+#include <stdint.h>
 
 #if ((defined (__SUNPRO_C) || defined(__SUNPRO_CC)) || defined __GNUC__)
 #define EXPORT_FUNCTION __attribute__ ((visibility("default")))
