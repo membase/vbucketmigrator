@@ -26,6 +26,10 @@
 #include <queue>
 #include <event.h>
 
+#ifndef evutil_socket_t
+#define evutil_socket_t int
+#endif
+
 class BinaryMessagePipeCallback {
 public:
     virtual ~BinaryMessagePipeCallback() {}
@@ -37,7 +41,7 @@ public:
 };
 
 extern "C" {
-    void event_handler(int fd, short which, void *arg);
+    void event_handler(evutil_socket_t fd, short which, void *arg);
 }
 
 class BinaryMessagePipe {

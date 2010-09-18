@@ -259,7 +259,7 @@ private:
 };
 
 extern "C" {
-    void event_handler(int fd, short which, void *arg) {
+    void event_handler(evutil_socket_t fd, short which, void *arg) {
         (void)fd;
         BinaryMessagePipe *pipe;
         pipe = reinterpret_cast<BinaryMessagePipe*>(arg);
@@ -281,7 +281,7 @@ extern "C" {
         pipe->updateEvent();
     }
 
-    static void timer_handler(int fd, short which, void *arg) {
+    static void timer_handler(evutil_socket_t fd, short which, void *arg) {
         (void)fd;
         (void)which;
         (void)arg;
