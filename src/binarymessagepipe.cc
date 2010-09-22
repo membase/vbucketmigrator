@@ -232,7 +232,7 @@ void BinaryMessagePipe::authenticate(const std::string &authname,
     }
 
     if (msg->data.res->response.opcode != PROTOCOL_BINARY_CMD_SASL_LIST_MECHS) {
-        throw std::runtime_error(std::string("Internal error, unexpected pacage received"));
+        throw std::runtime_error(std::string("Internal error, unexpected package received"));
     }
 
     if (ntohs(msg->data.res->response.status) != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
