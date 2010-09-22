@@ -29,6 +29,7 @@
 #include <stdexcept>
 
 #include <memcached/protocol_binary.h>
+#include <memcached/vbucket.h>
 
 class BinaryMessage {
 public:
@@ -72,8 +73,42 @@ public:
         std::stringstream ss;
         ss << "[ V: " << getVBucketId()
            << " opcode: 0x" << std::setfill('0') << std::setw(2) << std::hex
-           << static_cast<int>(data.req->request.opcode)
-           << " k: <" << getKey() << ">]";
+           << static_cast<int>(data.req->request.opcode);
+
+        if (data.req->request.opcode == PROTOCOL_BINARY_CMD_TAP_VBUCKET_SET) {
+            if (ntohl(data.req->request.bodylen) >= sizeof(vbucket_state_t)) {
+                vbucket_state_t state;
+                memcpy(&state, data.rawBytes + sizeof(data.vs->bytes),
+                       sizeof(state));
+                state = static_cast<vbucket_state_t>(ntohl(state));
+
+                ss << " (set vbucket state to \"";
+                switch (state) {
+                case active:
+                    ss << "active\"";
+                    break;
+                case replica:
+                    ss << "replica\"";
+                    break;
+                case pending:
+                    ss << "pending\"";
+                    break;
+                case dead:
+                    ss << "dead\"";
+                    break;
+                default:
+                    ss << "unknown";
+                }
+                ss << ")";
+            }
+        }
+
+        if (data.req->request.keylen != 0) {
+            ss << " k: <" << getKey() << ">";
+        }
+
+        ss << "]";
+
         return ss.str();
     }
 
