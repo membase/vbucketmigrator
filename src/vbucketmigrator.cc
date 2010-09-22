@@ -679,7 +679,7 @@ int main(int argc, char **argv)
             cout << "Validate bucket states" << std::endl;
         }
 
-        bool error = false;
+        int numSuccess = 0;
         map<uint16_t, list<BinaryMessagePipe*> >::iterator iterator;
 
         for (iterator = bucketMap.begin();
@@ -696,30 +696,27 @@ int main(int argc, char **argv)
                     cerr << "\t" << iterator->first
                          << " Failed to verify, pipe to "
                          << p->toString() << " is closed!" << endl;
-                    error = true;
                     continue ;
                 }
 
                 std::string msg;
                 try {
-                    vbucket_state_t state = p->getVBucketState(iterator->first);
+                    if (state == active) {
+                        ++numSuccess;
+                    }
                     if (state != active) {
                         cerr << "Incorrect state for " << iterator->first
                              << " at "
                              << p->toString() << ": " << state << endl;
-                        error = true;
                     } else if (verbosity) {
                         cout << "\t" << iterator->first << " ok" << endl;
                     }
                 } catch (std::string &e) {
                     msg = e;
-                    error = true;
                 } catch (std::exception &e) {
                     msg = e.what();
-                    error = true;
                 } catch (...) {
                     msg.assign("Unhandled exception");
-                    error = true;
                 }
 
                 if (msg.length()) {
@@ -729,7 +726,7 @@ int main(int argc, char **argv)
             }
         }
 
-        if (error && exit_code == 0) {
+        if (numSuccess != bucketMap.size() && exit_code == 0) {
             exit_code = EX_SOFTWARE;
         }
     }
