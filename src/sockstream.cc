@@ -220,6 +220,30 @@ istream *Socket::getInStream()
     return in;
 }
 
+void Socket::setTimeout(int which, int millis) {
+#ifdef WIN32
+    int err = setsockopt(sock, SOL_SOCKET,
+                         which,
+                         (char *)&millis, sizeof(millis));
+    assert(err == NO_ERROR);
+#else
+    struct timeval tv;
+
+    tv.tv_sec = millis / 1000;
+    tv.tv_usec = (millis % 1000) * 1000;
+
+    int err = setsockopt(sock, SOL_SOCKET, which,
+                         (struct timeval *)&tv,
+                         sizeof(struct timeval));
+    assert(err == 0);
+#endif
+}
+
+void Socket::setTimeout(int millis) {
+    setTimeout(SO_SNDTIMEO, millis);
+    setTimeout(SO_RCVTIMEO, millis);
+}
+
 void Socket::setBlockingMode(bool blocking) throw (std::string)
 {
 #ifdef WIN32

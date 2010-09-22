@@ -327,8 +327,11 @@ void BinaryMessagePipe::authenticate(const std::string &authname,
 #endif
 }
 
-vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket) {
+vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket, int tmout) {
     sock.setBlockingMode(true);
+    if (tmout > 0) {
+        sock.setTimeout(tmout);
+    }
     BinaryMessage *message = new GetVBucketStateBinaryMessage(bucket);
     ++message->refcount;
     queue.push(message);

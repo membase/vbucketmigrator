@@ -101,7 +101,7 @@ public:
         return ss.str();
     }
 
-    vbucket_state_t getVBucketState(uint16_t bucket);
+    vbucket_state_t getVBucketState(uint16_t bucket, int tmout);
 
     bool isClosed() const { return closed; }
 

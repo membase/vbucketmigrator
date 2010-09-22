@@ -701,6 +701,8 @@ int main(int argc, char **argv)
 
                 std::string msg;
                 try {
+                    vbucket_state_t state = p->getVBucketState(iterator->first,
+                                                               timeout * 1000);
                     if (state == active) {
                         ++numSuccess;
                     }
