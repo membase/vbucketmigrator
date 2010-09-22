@@ -220,14 +220,14 @@ istream *Socket::getInStream()
     return in;
 }
 
-void Socket::setNonBlocking() throw (std::string)
+void Socket::setBlockingMode(bool blocking) throw (std::string)
 {
 #ifdef WIN32
-    u_long arg = 1;
+    u_long arg = blocking ? 0 : 1;
     if (ioctlsocket(sock, FIONBIO, &arg) == SOCKET_ERROR) {
         stringstream msg;
-        msg << "Failed to enable nonblocking io: "
-            << strerror(get_socket_errno());
+        msg << "Failed to enable " << (blocking ? "" : "non")
+            << "blocking io: " << strerror(get_socket_errno());
         throw msg.str();
     }
 #else
@@ -238,12 +238,24 @@ void Socket::setNonBlocking() throw (std::string)
         throw msg.str();
     }
 
-    if ((flags & O_NONBLOCK) != O_NONBLOCK) {
-        if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0) {
-            stringstream msg;
-            msg << "Failed to enable O_NONBLOCK: " << strerror(get_socket_errno());
-            throw msg.str();
+    bool update = false;
+    if (blocking) {
+        if ((flags & O_NONBLOCK) == O_NONBLOCK) {
+            update = true;
+            flags ^= O_NONBLOCK;
         }
+    } else {
+        if ((flags & O_NONBLOCK) != O_NONBLOCK) {
+            update = true;
+            flags |= O_NONBLOCK;
+        }
+    }
+
+    if (update && (fcntl(sock, F_SETFL, flags) < 0)) {
+        stringstream msg;
+        msg << "Failed to " << (blocking ? "disable" : "enable")
+            << " O_NONBLOCK: " << strerror(get_socket_errno());
+        throw msg.str();
     }
 #endif
 }

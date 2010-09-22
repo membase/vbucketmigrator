@@ -21,7 +21,7 @@
 #include "binarymessage.h"
 #include "mutex.h"
 #include "sockstream.h"
-
+#include <memcached/vbucket.h>
 #include <string>
 #include <queue>
 #include <event.h>
@@ -100,6 +100,10 @@ public:
            << " on fd " << sock.getSocket();
         return ss.str();
     }
+
+    vbucket_state_t getVBucketState(uint16_t bucket);
+
+    bool isClosed() const { return closed; }
 
 protected:
 

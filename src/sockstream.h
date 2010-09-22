@@ -69,7 +69,10 @@ public:
     std::string getLocalAddress() const throw (std::string);
     std::string getRemoteAddress() const throw (std::string);
 
-    void setNonBlocking() throw (std::string);
+    void setBlockingMode(bool blocking) throw (std::string);
+    void setBlocking() throw (std::string) { setBlockingMode(true); }
+    void setNonBlocking()throw (std::string) { setBlockingMode(false); }
+
     void resolve(void) throw (std::string);
     void connect(void) throw (std::string);
     void close(void);

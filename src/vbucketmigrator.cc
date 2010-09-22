@@ -64,7 +64,8 @@ static void usage(std::string binary) {
          << "\t-v           Increase verbosity" << endl
          << "\t-N name      Use a tap stream named \"name\"" << endl
          << "\t-T timeout   Terminate if nothing happened for timeout seconds" << endl
-         << "\t-e           Run as an Erlang port" << endl;
+         << "\t-e           Run as an Erlang port" << endl
+         << "\t-V           Validate bucket takeover" << endl;
     exit(EX_USAGE);
 }
 
@@ -436,8 +437,9 @@ int main(int argc, char **argv)
     string auth;
     string passwd;
     string name;
+    bool validate = false;
 
-    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:tvT:e?")) != EOF) {
+    while ((cmd = getopt(argc, argv, "N:Aa:h:b:m:d:tvT:e?V")) != EOF) {
         switch (cmd) {
         case 'A':
             tapAck = true;
@@ -479,6 +481,9 @@ int main(int argc, char **argv)
             break;
         case 'e':
             erlang = true;
+            break;
+        case 'V':
+            validate = true;
             break;
         case '?': /* FALLTHROUGH */
         default:
@@ -667,6 +672,67 @@ int main(int argc, char **argv)
         cerr << "Had " << controller.getPendingSendCount()
              << " pending messages at exit." << endl;
         exit_code = exit_code == 0 ? EX_SOFTWARE : exit_code;
+    }
+
+    // Validate all takeovers..
+    if (exit_code == 0 && takeover && validate) {
+        if (verbosity) {
+            cout << "Validate bucket states" << std::endl;
+        }
+
+        bool error = false;
+        map<uint16_t, list<BinaryMessagePipe*> >::iterator iterator;
+
+        for (iterator = bucketMap.begin();
+             iterator != bucketMap.end();
+             ++iterator) {
+
+            for (list<BinaryMessagePipe*>::iterator iter = iterator->second.begin();
+                 iter != iterator->second.end();
+                 ++iter) {
+
+                BinaryMessagePipe* p = *iter;
+
+                if (p->isClosed()) {
+                    cerr << "\t" << iterator->first
+                         << " Failed to verify, pipe to "
+                         << p->toString() << " is closed!" << endl;
+                    error = true;
+                    continue ;
+                }
+
+                std::string msg;
+                try {
+                    vbucket_state_t state = p->getVBucketState(iterator->first);
+                    if (state != active) {
+                        cerr << "Incorrect state for " << iterator->first
+                             << " at "
+                             << p->toString() << ": " << state << endl;
+                        error = true;
+                    } else if (verbosity) {
+                        cout << "\t" << iterator->first << " ok" << endl;
+                    }
+                } catch (std::string &e) {
+                    msg = e;
+                    error = true;
+                } catch (std::exception &e) {
+                    msg = e.what();
+                    error = true;
+                } catch (...) {
+                    msg.assign("Unhandled exception");
+                    error = true;
+                }
+
+                if (msg.length()) {
+                    cerr << "\t" << iterator->first << " Failed to verify: "
+                         << msg.c_str() << endl;
+                }
+            }
+        }
+
+        if (error && exit_code == 0) {
+            exit_code = EX_SOFTWARE;
+        }
     }
 
     return exit_code;

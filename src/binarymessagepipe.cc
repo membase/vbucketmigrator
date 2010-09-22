@@ -326,3 +326,50 @@ void BinaryMessagePipe::authenticate(const std::string &authname,
     } while (true);
 #endif
 }
+
+vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket) {
+    sock.setBlockingMode(true);
+    BinaryMessage *message = new GetVBucketStateBinaryMessage(bucket);
+    ++message->refcount;
+    queue.push(message);
+    if (!drainBuffers()) {
+        throw std::runtime_error(std::string("Failed to send vbucket get state"));
+    }
+
+    if (!readMessage()) {
+        throw std::runtime_error(std::string("Failed to receive vbucket state"));
+    }
+
+    if (msg->data.res->response.opcode != 0x84) {
+        throw std::runtime_error(std::string("Internal error, unexpected pacage received"));
+    }
+
+    if (ntohs(msg->data.res->response.status) != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+        std::stringstream ss;
+        ss << "Failed to get vbucket state: "
+           << ntohs(msg->data.res->response.status);
+        throw std::runtime_error(ss.str());
+    }
+
+    std::string state = msg->getKey();
+    delete msg;
+    msg = NULL;
+    vbucket_state_t ret;
+
+    if (state.compare("active") == 0) {
+        ret = active;
+    } else if (state.compare("replica") == 0) {
+        ret = replica;
+    } else if (state.compare("pending") == 0) {
+        ret = pending;
+    } else if (state.compare("dead") == 0) {
+        ret = dead;
+    } else {
+        std::stringstream ss;
+        ss << "Internal error, received unknown vbucket state: ["
+           << state.c_str() << "] " << state.length();
+        throw std::runtime_error(ss.str());
+    }
+
+    return ret;
+}
