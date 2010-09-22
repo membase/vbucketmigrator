@@ -574,7 +574,6 @@ int main(int argc, char **argv)
     UpstreamBinaryMessagePipeCallback upstream(&controller);
     DownstreamBinaryMessagePipeCallback downstream(&controller);
 
-    map<int, BinaryMessagePipe*> servermap;
     map<uint16_t, list<BinaryMessagePipe*> > bucketMap;
     for (vector<uint16_t>::iterator iter = buckets.begin();
          iter != buckets.end();
