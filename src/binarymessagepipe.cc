@@ -217,8 +217,10 @@ void BinaryMessagePipe::authenticate(const std::string &authname,
         { SASL_CB_PASS, (SASLFUNC)&get_password, (void*)&secret.secret },
         { SASL_CB_LIST_END, NULL, NULL }
     };
+
+    memset(secret.buffer, 0, sizeof(secret.buffer));
     secret.secret.len = password.length();
-    strcpy((char*)secret.secret.data, password.c_str());
+    memcpy(secret.secret.data, password.c_str(), password.length());
 
     BinaryMessage *message = new SaslListMechsBinaryMessage;
     ++message->refcount;
