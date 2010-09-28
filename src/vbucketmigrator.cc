@@ -733,5 +733,11 @@ int main(int argc, char **argv)
         }
     }
 
+    if (exit_code == 0 && !takeover) {
+        // It is only the takeover processes that should exit, so getting
+        // here would be some sort of a failure..
+        exit_code = EX_SOFTWARE;
+    }
+
     return exit_code;
 }
