@@ -679,7 +679,7 @@ int main(int argc, char **argv)
             cout << "Validate bucket states" << std::endl;
         }
 
-        int numSuccess = 0;
+        unsigned int numSuccess = 0;
         map<uint16_t, list<BinaryMessagePipe*> >::iterator iterator;
 
         for (iterator = bucketMap.begin();
