@@ -25,10 +25,6 @@ Connect to the given host:port combination.
 
 Operate on the specified bucket id
 
-=item -m mapfile
-
-Use mapfile to map from a bucket id to a host id
-
 =item -e
 
 Run as an Erlang port (terminate if stdin is closed)
@@ -43,8 +39,7 @@ Terminate if no progress happens for n seconds.
 
 =item -d host:port
 
-Send all vbuckets to this server instead of using a mapfile as specified
-with -m
+Send all vbuckets to this server.
 
 =item -v
 
