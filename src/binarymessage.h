@@ -255,4 +255,21 @@ public:
     }
 };
 
+class FlushBinaryMessage : public BinaryMessage {
+public:
+    FlushBinaryMessage() : BinaryMessage() {
+        size = sizeof(data.req->bytes);
+        data.rawBytes = new char[size];
+        data.req->request.magic = PROTOCOL_BINARY_REQ;
+        data.req->request.opcode = PROTOCOL_BINARY_CMD_FLUSHQ;
+        data.req->request.keylen = 0;
+        data.req->request.extlen = 0;
+        data.req->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+        data.req->request.vbucket = 0;
+        data.req->request.bodylen = 0;
+        data.req->request.opaque = 0xdeaddead;
+        data.req->request.cas = 0;
+    }
+};
+
 #endif

@@ -71,4 +71,8 @@ successful transfer of the messages. Please note that this
 use a method specific to ep-engine and may not work as
 intended on other memcached engines.
 
+=item -F
+
+Flush all the data from the receiving side before sending new data.
+
 =cut

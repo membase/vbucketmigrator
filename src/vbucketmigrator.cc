@@ -60,6 +60,7 @@ static void usage(std::string binary) {
          << "\t-a auth      Try to authenticate <auth>" << endl
          << "\t-d host:port Send all vbuckets to this server" << endl
          << "\t-v           Increase verbosity" << endl
+         << "\t-F           Flush all data on the destination" << endl
          << "\t-N name      Use a tap stream named \"name\"" << endl
          << "\t-T timeout   Terminate if nothing happened for timeout seconds" << endl
          << "\t-e           Run as an Erlang port" << endl
@@ -317,7 +318,8 @@ static BinaryMessagePipe *getServer(int serverindex,
                                     BinaryMessagePipeCallback &cb,
                                     struct event_base *b,
                                     const std::string &auth,
-                                    const std::string &passwd)
+                                    const std::string &passwd,
+                                    bool flush)
 {
     static map<int, BinaryMessagePipe*> servermap;
     BinaryMessagePipe* ret;
@@ -346,6 +348,9 @@ static BinaryMessagePipe *getServer(int serverindex,
             }
         }
         sock->setNonBlocking();
+        if (flush) {
+            ret->sendMessage(new FlushBinaryMessage);
+        }
         ret->updateEvent();
         servermap[serverindex] = ret;
     } else {
@@ -429,8 +434,9 @@ int main(int argc, char **argv)
     string passwd;
     string name;
     bool validate = false;
+    bool flush = false;
 
-    while ((cmd = getopt(argc, argv, "N:Aa:h:b:d:tvT:e?V")) != EOF) {
+    while ((cmd = getopt(argc, argv, "N:Aa:h:b:d:tvFT:e?V")) != EOF) {
         switch (cmd) {
         case 'A':
             tapAck = true;
@@ -460,6 +466,9 @@ int main(int argc, char **argv)
             break;
         case 'N':
             name.assign(optarg);
+            break;
+        case 'F':
+            flush = true;
             break;
         case 'T':
             timeout = atoi(optarg);
@@ -551,7 +560,8 @@ int main(int argc, char **argv)
             int idx = 0;
             BinaryMessagePipe* pipe;
             try {
-                pipe = getServer(idx, destination, *iter, downstream, evbase, auth, passwd);
+                pipe = getServer(idx, destination, *iter, downstream, evbase,
+                                 auth, passwd, flush);
             } catch (std::string& e) {
                 cerr << "Failed to connect to host for bucket " << *iter
                      << ": " << e << std::endl;
@@ -561,7 +571,8 @@ int main(int argc, char **argv)
         } else {
             BinaryMessagePipe* pipe;
             try {
-                pipe = getServer(0, destination, *iter, downstream, evbase, auth, passwd);
+                pipe = getServer(0, destination, *iter, downstream, evbase,
+                                 auth, passwd, flush);
             } catch (std::string& e) {
                 cerr << "Failed to connect to host for bucket " << *iter
                      << ": " << e << std::endl;
