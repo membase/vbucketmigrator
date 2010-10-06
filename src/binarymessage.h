@@ -69,6 +69,16 @@ public:
         return key;
     }
 
+    std::string getBody() const {
+        std::string key;
+        uint16_t bodylen = ntohl(data.req->request.bodylen);
+        char *ptr = data.rawBytes + sizeof(*data.req);
+        ptr += data.req->request.extlen + data.req->request.keylen;
+        key.assign(ptr, bodylen);
+
+        return key;
+    }
+
     std::string toString() const {
         std::stringstream ss;
         ss << "[ V: " << getVBucketId()

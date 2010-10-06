@@ -356,7 +356,7 @@ vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket, int tmout) {
         throw std::runtime_error(ss.str());
     }
 
-    std::string state = msg->getKey();
+    std::string state = msg->getBody();
     delete msg;
     msg = NULL;
     vbucket_state_t ret;
