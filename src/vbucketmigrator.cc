@@ -266,7 +266,7 @@ extern "C" {
 
         if (which == EV_TIMEOUT) {
             std::cerr << "Timed out on " << pipe->toString() << std::endl;
-            _Exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);
         }
 
         ++packets;
@@ -298,7 +298,7 @@ extern "C" {
                 // more of a safety net and less of a race against the
                 // normal timeout.
                 std::cerr << "Safety net timed out" << std::endl;
-                _Exit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
         } else {
             numSame = 0;
@@ -491,7 +491,6 @@ int main(int argc, char **argv)
             fprintf(stderr, "Failed to initialize sasl library!\n");
             return EX_OSERR;
         }
-        atexit(sasl_done);
         if (isatty(fileno(stdin))) {
             char *pw = getpass("Enter password: ");
             if (pw == NULL) {
