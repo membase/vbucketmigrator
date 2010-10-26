@@ -94,7 +94,7 @@ class UpstreamController {
 public:
     UpstreamController() :
         upstream(0), pendingSendCount(0),
-        closed(false), inputPlugged(false) {}
+        closed(false), inputPlugged(false), aborting(false) {}
     void sendUpstreamMessage(BinaryMessage *msg) {
         upstream->sendMessage(msg);
     }
@@ -118,6 +118,15 @@ public:
             inputPlugged = false;
         }
     }
+
+    void abort() {
+        if (!aborting) {
+            cerr << "Downstream connection closed.. shutdown upstream" << endl;
+            aborting = true;
+            upstream->abort();
+        }
+    }
+
     void close() {
         closed = true;
     }
@@ -134,12 +143,16 @@ private:
     int pendingSendCount;
     bool closed;
     bool inputPlugged;
+    bool aborting;
 };
 
 class DownstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
     DownstreamBinaryMessagePipeCallback(UpstreamController *_upstream) :
-        upstream(_upstream) {}
+        upstream(_upstream), aborting(false)
+    {
+        // Empty
+    }
 
     void messageReceived(BinaryMessage *msg) {
         upstream->sendUpstreamMessage(msg);
@@ -174,22 +187,31 @@ public:
     }
 
     void abort() {
-        // send a message upstream that we're aborting this tap stream
-        markcomplete();
+        if (!aborting) {
+            aborting = true;
+            cerr << "An error occured on the downstream connection.." << endl;
+            markcomplete();
+            upstream->abort();
+        }
     }
 
     void shutdown() {
+        aborting = true;
         markcomplete();
+        upstream->abort();
     }
 private:
     UpstreamController *upstream;
+    bool aborting;
 };
 
 class UpstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
     UpstreamBinaryMessagePipeCallback(UpstreamController *_controller) :
-        BinaryMessagePipeCallback(),
-        controller(_controller) {}
+        BinaryMessagePipeCallback(), controller(_controller), aborting(false)
+    {
+        // EMPTY
+    }
 
     void messageReceived(BinaryMessage *msg) {
         if (verbosity > 1) {
@@ -231,14 +253,17 @@ public:
     }
 
     void abort() {
-        map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
-        for (bucketIter = bucketMap->begin(); bucketIter != bucketMap->end(); ++bucketIter) {
-            list<BinaryMessagePipe*>::iterator iter;
-            for (iter = bucketIter->second.begin(); iter != bucketIter->second.end(); ++iter) {
-                (*iter)->abort();
+        if (!aborting) {
+            aborting = true;
+            map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
+            for (bucketIter = bucketMap->begin(); bucketIter != bucketMap->end(); ++bucketIter) {
+                list<BinaryMessagePipe*>::iterator iter;
+                for (iter = bucketIter->second.begin(); iter != bucketIter->second.end(); ++iter) {
+                    (*iter)->abort();
+                }
             }
+            completeMe();
         }
-        completeMe();
     }
 
     void shutdown() {
@@ -256,6 +281,7 @@ public:
 private:
     UpstreamController *controller;
     map<uint16_t, list<BinaryMessagePipe*> > *bucketMap;
+    bool aborting;
 };
 
 extern "C" {
