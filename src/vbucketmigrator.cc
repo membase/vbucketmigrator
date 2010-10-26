@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <event.h>
 #include <pthread.h>
+#include <algorithm>
 #include <memcached/vbucket.h>
 
 #include "sockstream.h"
@@ -207,8 +208,10 @@ private:
 
 class UpstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
-    UpstreamBinaryMessagePipeCallback(UpstreamController *_controller) :
-        BinaryMessagePipeCallback(), controller(_controller), aborting(false)
+    UpstreamBinaryMessagePipeCallback(UpstreamController *_controller,
+                                      const vector<uint16_t> &_buckets) :
+        BinaryMessagePipeCallback(), controller(_controller),
+        buckets(_buckets), aborting(false)
     {
         // EMPTY
     }
@@ -219,32 +222,27 @@ public:
                       << msg->toString() << std::endl;
         }
 
-        map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
         if (msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_NOOP) {
             // Ignore NOOPs
             delete msg;
             return;
         }
-        bucketIter = bucketMap->find(msg->getVBucketId());
-        if (bucketIter == bucketMap->end()) {
+
+        if (!std::binary_search(buckets.begin(), buckets.end(),
+                                msg->getVBucketId())) {
             std::cerr << "Internal server error!!" << std::endl
                       << "Received a message for a bucket I didn't request:"
                       << msg->toString()
                       << std::endl;
             delete msg;
         } else {
-            list<BinaryMessagePipe*>::iterator iter;
-            for (iter = bucketIter->second.begin();
-                 iter != bucketIter->second.end();
-                 iter++) {
-                controller->incrementPendingDownstream();
-                (*iter)->sendMessage(msg);
-            }
+            controller->incrementPendingDownstream();
+            downstream->sendMessage(msg);
         }
     }
 
-    void setBucketmap(map<uint16_t, list<BinaryMessagePipe*> > &m) {
-        bucketMap = &m;
+    void setDownstream(BinaryMessagePipe *_downstream) {
+        downstream = _downstream;
     }
 
     void completeMe() {
@@ -255,32 +253,21 @@ public:
     void abort() {
         if (!aborting) {
             aborting = true;
-            map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
-            for (bucketIter = bucketMap->begin(); bucketIter != bucketMap->end(); ++bucketIter) {
-                list<BinaryMessagePipe*>::iterator iter;
-                for (iter = bucketIter->second.begin(); iter != bucketIter->second.end(); ++iter) {
-                    (*iter)->abort();
-                }
-            }
+            downstream->abort();
             completeMe();
         }
     }
 
     void shutdown() {
-        map<uint16_t, list<BinaryMessagePipe*> >::iterator bucketIter;
-        for (bucketIter = bucketMap->begin(); bucketIter != bucketMap->end(); ++bucketIter) {
-            list<BinaryMessagePipe*>::iterator iter;
-            for (iter = bucketIter->second.begin(); iter != bucketIter->second.end(); ++iter) {
-                (*iter)->plugInput();
-                (*iter)->updateEvent();
-            }
-        }
+        downstream->plugInput();
+        downstream->updateEvent();
         completeMe();
     }
 
 private:
+    BinaryMessagePipe *downstream;
     UpstreamController *controller;
-    map<uint16_t, list<BinaryMessagePipe*> > *bucketMap;
+    vector<uint16_t> buckets;
     bool aborting;
 };
 
@@ -338,25 +325,20 @@ extern "C" {
     }
 }
 
-static BinaryMessagePipe *getServer(int serverindex,
-                                    const string &destination,
-                                    uint16_t vbucketId,
+static BinaryMessagePipe *getServer(const string &destination,
                                     BinaryMessagePipeCallback &cb,
                                     struct event_base *b,
                                     const std::string &auth,
                                     const std::string &passwd,
                                     bool flush)
 {
-    static map<int, BinaryMessagePipe*> servermap;
     BinaryMessagePipe* ret;
-
-    map<int, BinaryMessagePipe*>::iterator server = servermap.find(serverindex);
-    if (server == servermap.end()) {
+    std::string msg;
+    try {
         string host(destination);
         Socket *sock = new Socket(host);
         if (verbosity) {
-            cout << "Connecting to downstream " << *sock
-                 << " for " << vbucketId << endl;
+            cout << "Connecting to " << *sock << endl;
         }
         sock->connect();
         ret = new BinaryMessagePipe(*sock, cb, b, timeout);
@@ -364,13 +346,9 @@ static BinaryMessagePipe *getServer(int serverindex,
             if (verbosity) {
                 cout << "Authenticating towards: " << *sock << endl;
             }
-            try {
-                ret->authenticate(auth, passwd);
-                if (verbosity) {
-                    cout << "Authenticated towards: " << *sock << endl;
-                }
-            } catch (std::exception& e) {
-                throw std::string(e.what());
+            ret->authenticate(auth, passwd);
+            if (verbosity) {
+                cout << "Authenticated towards: " << *sock << endl;
             }
         }
         sock->setNonBlocking();
@@ -378,9 +356,17 @@ static BinaryMessagePipe *getServer(int serverindex,
             ret->sendMessage(new FlushBinaryMessage);
         }
         ret->updateEvent();
-        servermap[serverindex] = ret;
-    } else {
-        ret = server->second;
+
+    } catch (std::string &e) {
+        msg = e;
+    } catch (std::exception &e) {
+        msg = e.what();
+    } catch (...) {
+        msg.assign("Unhandled exception");
+    }
+
+    if (msg.length() > 0) {
+        throw msg;
     }
 
     return ret;
@@ -562,6 +548,7 @@ int main(int argc, char **argv)
         return EX_USAGE;
     }
 
+    sort(buckets.begin(), buckets.end());
     struct event_base *evbase = event_init();
     if (evbase == NULL) {
         cerr << "Failed to initialize libevent" << endl;
@@ -573,66 +560,25 @@ int main(int argc, char **argv)
     }
 
     UpstreamController controller;
-    UpstreamBinaryMessagePipeCallback upstream(&controller);
+    UpstreamBinaryMessagePipeCallback upstream(&controller, buckets);
     DownstreamBinaryMessagePipeCallback downstream(&controller);
+    BinaryMessagePipe *downstreamPipe;
+    BinaryMessagePipe *upstreamPipe;
 
-    map<uint16_t, list<BinaryMessagePipe*> > bucketMap;
-    for (vector<uint16_t>::iterator iter = buckets.begin();
-         iter != buckets.end();
-         ++iter) {
-
-        if (takeover) {
-            int idx = 0;
-            BinaryMessagePipe* pipe;
-            try {
-                pipe = getServer(idx, destination, *iter, downstream, evbase,
-                                 auth, passwd, flush);
-            } catch (std::string& e) {
-                cerr << "Failed to connect to host for bucket " << *iter
-                     << ": " << e << std::endl;
-                return EX_CONFIG;
-            }
-            bucketMap[*iter].push_back(pipe);
-        } else {
-            BinaryMessagePipe* pipe;
-            try {
-                pipe = getServer(0, destination, *iter, downstream, evbase,
-                                 auth, passwd, flush);
-            } catch (std::string& e) {
-                cerr << "Failed to connect to host for bucket " << *iter
-                     << ": " << e << std::endl;
-                return EX_CONFIG;
-            }
-            bucketMap[*iter].push_back(pipe);
-        }
+    try {
+        downstreamPipe = getServer(destination, downstream, evbase,
+                                   auth, passwd, flush);
+        upstreamPipe = getServer(host, upstream, evbase,
+                                 auth, passwd, false);
+    } catch (std::string &e) {
+        cerr << "Failed to connect to host: " << e.c_str() << endl;
+        return EX_CONFIG;
     }
-
-    if (verbosity) {
-        cout << "Connecting to source: " << host << endl;
-    }
-
-    Socket sock(host);
-    sock.connect();
-    BinaryMessagePipe pipe(sock, upstream, evbase, timeout);
-    if (auth.length() > 0) {
-        if (verbosity) {
-            cout << "Authenticating towards: " << sock << endl;
-        }
-        try {
-            pipe.authenticate(auth, passwd);
-            if (verbosity) {
-                cout << "Authenticated towards: " << sock << endl;
-            }
-        } catch (std::exception &e) {
-            cerr << "Failed to authenticate: " << e.what() << endl;
-            return EX_CONFIG;
-        }
-    }
-    sock.setNonBlocking();
-    pipe.sendMessage(new TapRequestBinaryMessage(name, buckets, takeover, tapAck));
-    pipe.updateEvent();
-    upstream.setBucketmap(bucketMap);
-    controller.setUpstream(&pipe);
+    upstreamPipe->sendMessage(new TapRequestBinaryMessage(name, buckets,
+                                                          takeover, tapAck));
+    upstreamPipe->updateEvent();
+    upstream.setDownstream(downstreamPipe);
+    controller.setUpstream(upstreamPipe);
 
     event_base_loop(evbase, 0);
 
@@ -655,55 +601,45 @@ int main(int argc, char **argv)
         }
 
         unsigned int numSuccess = 0;
-        map<uint16_t, list<BinaryMessagePipe*> >::iterator iterator;
+        vector<uint16_t>::iterator iter;
+        for (iter = buckets.begin(); iter != buckets.end(); ++iter) {
 
-        for (iterator = bucketMap.begin();
-             iterator != bucketMap.end();
-             ++iterator) {
+            if (downstreamPipe->isClosed()) {
+                cerr << "\t" << *iter
+                     << " Failed to verify, pipe to "
+                     << downstreamPipe->toString() << " is closed!" << endl;
+                continue ;
+            }
 
-            for (list<BinaryMessagePipe*>::iterator iter = iterator->second.begin();
-                 iter != iterator->second.end();
-                 ++iter) {
-
-                BinaryMessagePipe* p = *iter;
-
-                if (p->isClosed()) {
-                    cerr << "\t" << iterator->first
-                         << " Failed to verify, pipe to "
-                         << p->toString() << " is closed!" << endl;
-                    continue ;
+            std::string msg;
+            try {
+                vbucket_state_t state = downstreamPipe->getVBucketState(*iter,
+                                                                        timeout * 1000);
+                if (state == active) {
+                    ++numSuccess;
                 }
-
-                std::string msg;
-                try {
-                    vbucket_state_t state = p->getVBucketState(iterator->first,
-                                                               timeout * 1000);
-                    if (state == active) {
-                        ++numSuccess;
-                    }
-                    if (state != active) {
-                        cerr << "Incorrect state for " << iterator->first
-                             << " at "
-                             << p->toString() << ": " << state << endl;
-                    } else if (verbosity) {
-                        cout << "\t" << iterator->first << " ok" << endl;
-                    }
-                } catch (std::string &e) {
-                    msg = e;
-                } catch (std::exception &e) {
-                    msg = e.what();
-                } catch (...) {
-                    msg.assign("Unhandled exception");
+                if (state != active) {
+                    cerr << "Incorrect state for " << *iter
+                         << " at "
+                         << downstreamPipe->toString() << ": " << state << endl;
+                } else if (verbosity) {
+                    cout << "\t" << *iter << " ok" << endl;
                 }
+            } catch (std::string &e) {
+                msg = e;
+            } catch (std::exception &e) {
+                msg = e.what();
+            } catch (...) {
+                msg.assign("Unhandled exception");
+            }
 
-                if (msg.length()) {
-                    cerr << "\t" << iterator->first << " Failed to verify: "
-                         << msg.c_str() << endl;
-                }
+            if (msg.length()) {
+                cerr << "\t" << *iter << " Failed to verify: "
+                     << msg.c_str() << endl;
             }
         }
 
-        if (numSuccess != bucketMap.size() && exit_code == 0) {
+        if (numSuccess != buckets.size() && exit_code == 0) {
             exit_code = EX_SOFTWARE;
         }
     }
