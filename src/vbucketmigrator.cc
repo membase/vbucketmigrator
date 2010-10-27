@@ -65,7 +65,9 @@ static void usage(std::string binary) {
          << "\t-N name      Use a tap stream named \"name\"" << endl
          << "\t-T timeout   Terminate if nothing happened for timeout seconds" << endl
          << "\t-e           Run as an Erlang port" << endl
-         << "\t-V           Validate bucket takeover" << endl;
+         << "\t-V           Validate bucket takeover" << endl
+         << "\t-E expiry    Reset the expiry of all items to 'expiry'." << endl
+         << "\t-f flag      Reset the flag of all items to 'flag'." << endl;
     exit(EX_USAGE);
 }
 
@@ -96,6 +98,7 @@ public:
     UpstreamController() :
         upstream(0), pendingSendCount(0),
         closed(false), inputPlugged(false), aborting(false) {}
+
     void sendUpstreamMessage(BinaryMessage *msg) {
         upstream->sendMessage(msg);
     }
@@ -150,10 +153,7 @@ private:
 class DownstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
     DownstreamBinaryMessagePipeCallback(UpstreamController *_upstream) :
-        upstream(_upstream), aborting(false)
-    {
-        // Empty
-    }
+        upstream(_upstream), aborting(false) { }
 
     void messageReceived(BinaryMessage *msg) {
         upstream->sendUpstreamMessage(msg);
@@ -211,11 +211,8 @@ public:
     UpstreamBinaryMessagePipeCallback(UpstreamController *_controller,
                                       const vector<uint16_t> &_buckets) :
         BinaryMessagePipeCallback(), controller(_controller),
-        buckets(_buckets), aborting(false)
-    {
-        // EMPTY
-    }
-
+        buckets(_buckets), aborting(false),
+        hasExpiry(false), hasFlags(false), expiry(0), flags(0) {}
     void messageReceived(BinaryMessage *msg) {
         if (verbosity > 1) {
             std::cout << "Received message from upstream server: "
@@ -237,8 +234,28 @@ public:
             delete msg;
         } else {
             controller->incrementPendingDownstream();
+            fixMessage(msg);
             downstream->sendMessage(msg);
         }
+    }
+
+    void fixMessage(BinaryMessage *msg) {
+        if(hasExpiry) {
+            msg->setExpiry(expiry);
+        }
+        if (hasFlags) {
+            msg->setFlags(flags);
+        }
+    }
+
+    void resetExpiry(uint32_t e) {
+        hasExpiry = true;
+        expiry = e;
+    }
+
+    void resetFlags(uint32_t f) {
+        hasFlags = true;
+        flags = f;
     }
 
     void setDownstream(BinaryMessagePipe *_downstream) {
@@ -269,6 +286,10 @@ private:
     UpstreamController *controller;
     vector<uint16_t> buckets;
     bool aborting;
+    bool hasExpiry;
+    bool hasFlags;
+    uint32_t expiry;
+    uint32_t flags;
 };
 
 extern "C" {
@@ -332,7 +353,7 @@ static BinaryMessagePipe *getServer(const string &destination,
                                     const std::string &passwd,
                                     bool flush)
 {
-    BinaryMessagePipe* ret;
+    BinaryMessagePipe* ret(NULL);
     std::string msg;
     try {
         string host(destination);
@@ -369,6 +390,7 @@ static BinaryMessagePipe *getServer(const string &destination,
         throw msg;
     }
 
+    assert(ret);
     return ret;
 }
 
@@ -447,9 +469,17 @@ int main(int argc, char **argv)
     string name;
     bool validate = false;
     bool flush = false;
+    string expiryResetValue;
+    string flagResetValue;
 
-    while ((cmd = getopt(argc, argv, "N:Aa:h:b:d:tvFT:e?V")) != EOF) {
+    while ((cmd = getopt(argc, argv, "N:Aa:h:b:d:tvFT:e?VE:f:")) != EOF) {
         switch (cmd) {
+        case 'E':
+            expiryResetValue.assign(optarg);
+            break;
+        case 'f':
+            flagResetValue.assign(optarg);
+            break;
         case 'A':
             tapAck = true;
             break;
@@ -564,6 +594,16 @@ int main(int argc, char **argv)
     DownstreamBinaryMessagePipeCallback downstream(&controller);
     BinaryMessagePipe *downstreamPipe;
     BinaryMessagePipe *upstreamPipe;
+
+    if (expiryResetValue.length() != 0) {
+        uint32_t expiry = strtoul(expiryResetValue.c_str(), NULL, 10);
+        upstream.resetExpiry(expiry);
+    }
+
+    if (flagResetValue.length() != 0) {
+        uint32_t flags = strtoul(flagResetValue.c_str(), NULL, 10);
+        upstream.resetFlags(flags);
+    }
 
     try {
         downstreamPipe = getServer(destination, downstream, evbase,

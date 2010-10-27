@@ -79,6 +79,18 @@ public:
         return key;
     }
 
+    void setExpiry(uint32_t expiry) {
+        if (data.mutation->message.header.request.opcode == PROTOCOL_BINARY_CMD_TAP_MUTATION) {
+            data.mutation->message.body.item.expiration = htonl(expiry);
+        }
+    }
+
+    void setFlags(uint32_t flags) {
+        if (data.mutation->message.header.request.opcode == PROTOCOL_BINARY_CMD_TAP_MUTATION) {
+            data.mutation->message.body.item.flags = htonl(flags);
+        }
+    }
+
     std::string toString() const {
         std::stringstream ss;
         ss << "[ V: " << getVBucketId()
