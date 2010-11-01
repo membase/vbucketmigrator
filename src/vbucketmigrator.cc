@@ -225,7 +225,9 @@ public:
             return;
         }
 
-        if (!std::binary_search(buckets.begin(), buckets.end(),
+        // Some messages are connection bound and not vbucket bound..
+        bool allow = msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_TAP_OPAQUE;
+        if (!allow && !std::binary_search(buckets.begin(), buckets.end(),
                                 msg->getVBucketId())) {
             std::cerr << "Internal server error!!" << std::endl
                       << "Received a message for a bucket I didn't request:"
