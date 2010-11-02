@@ -156,10 +156,15 @@ public:
         upstream(_upstream), aborting(false) { }
 
     void messageReceived(BinaryMessage *msg) {
-        upstream->sendUpstreamMessage(msg);
-        if (verbosity > 1) {
-            std::cout << "Received message from downstream server: "
-                      << msg->toString() << std::endl;
+        if (msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_NOOP) {
+            // Ignore NOOP responses
+            delete msg;
+        } else {
+            upstream->sendUpstreamMessage(msg);
+            if (verbosity > 1) {
+                std::cout << "Received message from downstream server: "
+                          << msg->toString() << std::endl;
+            }
         }
     }
 
@@ -219,14 +224,16 @@ public:
                       << msg->toString() << std::endl;
         }
 
-        if (msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_NOOP) {
-            // Ignore NOOPs
-            delete msg;
-            return;
-        }
-
         // Some messages are connection bound and not vbucket bound..
-        bool allow = msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_TAP_OPAQUE;
+        bool allow;
+        switch (msg->data.req->request.opcode) {
+        case PROTOCOL_BINARY_CMD_NOOP:
+        case PROTOCOL_BINARY_CMD_TAP_OPAQUE:
+            allow = true;
+            break;
+        default:
+            allow = false;
+        }
         if (!allow && !std::binary_search(buckets.begin(), buckets.end(),
                                 msg->getVBucketId())) {
             std::cerr << "Internal server error!!" << std::endl
