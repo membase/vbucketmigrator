@@ -22,6 +22,7 @@ EXTRA_DIST = docs LICENSE
 
 vbucketmigrator_SOURCES = src/binarymessage.h \
                           src/binarymessagepipe.cc src/binarymessagepipe.h \
+                          src/buckets.cc src/buckets.h \
                           src/config_helper.h \
                           src/mutex.h \
                           src/sockstream.cc src/sockstream.h \
@@ -60,7 +61,9 @@ endif
 
 vbucketmigrator_LDADD += -lpthread
 
-check_PROGRAMS=
+buckets_test_SOURCES = src/buckets.hh src/buckets.cc test/buckets.cc
+
+check_PROGRAMS=buckets_test
 TESTS=${check_PROGRAMS}
 
 test: check-TESTS

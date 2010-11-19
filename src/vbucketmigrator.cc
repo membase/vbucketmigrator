@@ -30,6 +30,7 @@
 
 #include "sockstream.h"
 #include "binarymessagepipe.h"
+#include "buckets.h"
 
 #ifndef EX_SOFTWARE
 #define EX_SOFTWARE 70
@@ -69,18 +70,6 @@ static void usage(std::string binary) {
          << "\t-E expiry    Reset the expiry of all items to 'expiry'." << endl
          << "\t-f flag      Reset the flag of all items to 'flag'." << endl;
     exit(EX_USAGE);
-}
-
-static uint16_t str2bucketid(const char *str)
-{
-    uint32_t val = atoi(str);
-    if ((val & 0xffff0000) != 0) {
-        std::string message = "Invalid bucket id: ";
-        message.append(str);
-        throw std::runtime_error(message);
-    }
-
-    return static_cast<uint16_t>(val);
 }
 
 void BinaryMessagePipeCallback::markcomplete() {
@@ -503,9 +492,9 @@ int main(int argc, char **argv)
             break;
         case 'b':
             try {
-                buckets.push_back(str2bucketid(optarg));
-            } catch (std::exception& e) {
-                cerr << e.what() << std::endl;
+                parseBuckets(buckets, optarg);
+            } catch (string& e) {
+                cerr << e.c_str() << endl;
                 return EX_USAGE;
             }
             break;

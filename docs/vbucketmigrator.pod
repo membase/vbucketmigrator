@@ -23,7 +23,15 @@ Connect to the given host:port combination.
 
 =item -b bucket id
 
-Operate on the specified bucket id
+Operate on the specified bucket id. You may specify a list of buckets
+by using , or ; as the separator character, or a range of buckets by
+specifying them as [start,stop].
+
+To add bucket 1, 2, 3 and 4 you may use one of the following:
+
+-b 1 -b 2 -b 3 -b 4
+-b 1,2,3,4
+-b [1,4]
 
 =item -e
 
