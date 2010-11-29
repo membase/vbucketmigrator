@@ -281,7 +281,10 @@ void BinaryMessagePipe::authenticate(const std::string &authname,
         if (msg->data.res->response.opcode != PROTOCOL_BINARY_CMD_SASL_STEP &&
             msg->data.res->response.opcode != PROTOCOL_BINARY_CMD_SASL_AUTH) {
             sasl_dispose(&conn);
-            throw std::runtime_error(std::string("Internal error unexpected pacakge received"));
+            std::stringstream ss;
+            ss << "Internal error unexpected package received during SASL auth."
+               << " Expected: STEP or AUTH, got: " << msg->toString();
+            throw std::runtime_error(ss.str());
         }
 
         uint16_t klen = ntohs(msg->data.res->response.keylen);
@@ -344,7 +347,9 @@ vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket, int tmout) {
     }
 
     if (msg->data.res->response.opcode != 0x84) {
-        throw std::runtime_error(std::string("Internal error, unexpected pacage received"));
+        std::stringstream ss;
+        ss << "Internal error, unexpected package received during vbucket validaton. Expected GET_VBUCKET, got: " << msg->toString();
+        throw std::runtime_error(ss.str());
     }
 
     if (ntohs(msg->data.res->response.status) != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
