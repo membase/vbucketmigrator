@@ -88,7 +88,7 @@ static bool doParseBucketList(vector<uint16_t> &buckets, const char *arg) throw 
             } else {
                 ++p;
                 skipWhite(p);
-                if (*p == NULL) {
+                if (*p == 0) {
                     return false;
                 }
             }
