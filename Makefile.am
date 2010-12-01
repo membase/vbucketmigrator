@@ -20,7 +20,8 @@ bin_PROGRAMS = vbucketmigrator
 noinst_PROGRAMS = moveit
 EXTRA_DIST = docs LICENSE
 
-vbucketmigrator_SOURCES = src/binarymessage.h \
+vbucketmigrator_SOURCES = src/backoff.cc src/backoff.h \
+                          src/binarymessage.h \
                           src/binarymessagepipe.cc src/binarymessagepipe.h \
                           src/buckets.cc src/buckets.h \
                           src/config_helper.h \

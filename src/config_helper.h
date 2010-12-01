@@ -112,4 +112,6 @@ extern void initialize_sockets(void);
 
 #include <stdint.h>
 
+extern uint8_t verbosity;
+
 #endif

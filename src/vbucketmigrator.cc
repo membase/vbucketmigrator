@@ -31,6 +31,7 @@
 #include "sockstream.h"
 #include "binarymessagepipe.h"
 #include "buckets.h"
+#include "backoff.h"
 
 #ifndef EX_SOFTWARE
 #define EX_SOFTWARE 70
@@ -38,7 +39,7 @@
 
 using namespace std;
 
-static uint8_t verbosity(0);
+uint8_t verbosity(0);
 static unsigned int timeout = 0;
 static int exit_code = EX_OK;
 static struct event timerev;
@@ -68,7 +69,10 @@ static void usage(std::string binary) {
          << "\t-e           Run as an Erlang port" << endl
          << "\t-V           Validate bucket takeover" << endl
          << "\t-E expiry    Reset the expiry of all items to 'expiry'." << endl
-         << "\t-f flag      Reset the flag of all items to 'flag'." << endl;
+         << "\t-f flag      Reset the flag of all items to 'flag'." << endl
+         << "\t-M d,l       Use stats monitoring to slow down (- to use default)" << endl
+         << "\t                d - the initial delay in ms" << endl
+         << "\t                l - the max limit in ep_queue_size" << endl;
     exit(EX_USAGE);
 }
 
@@ -469,8 +473,9 @@ int main(int argc, char **argv)
     bool flush = false;
     string expiryResetValue;
     string flagResetValue;
+    bool monitor = false;
 
-    while ((cmd = getopt(argc, argv, "N:Aa:h:b:d:tvFT:e?VE:f:")) != EOF) {
+    while ((cmd = getopt(argc, argv, "N:Aa:h:b:d:tvFT:e?VE:f:M:")) != EOF) {
         switch (cmd) {
         case 'E':
             expiryResetValue.assign(optarg);
@@ -518,6 +523,12 @@ int main(int argc, char **argv)
             break;
         case 'V':
             validate = true;
+            break;
+        case 'M' :
+            monitor = true;
+            if (*optarg != '-') {
+                setBackoffLimits(optarg);
+            }
             break;
         case '?': /* FALLTHROUGH */
         default:
@@ -585,6 +596,11 @@ int main(int argc, char **argv)
 
     if (erlang) {
         stdin_check(evbase);
+    }
+
+
+    if (monitor) {
+        startBackoffMonitorThread(destination);
     }
 
     UpstreamController controller;

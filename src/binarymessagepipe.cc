@@ -16,6 +16,7 @@
  */
 #include "config.h"
 #include "binarymessagepipe.h"
+#include "backoff.h"
 
 void BinaryMessagePipe::step(short mask) {
     if ((mask & EV_WRITE) == EV_WRITE) {
@@ -30,6 +31,7 @@ void BinaryMessagePipe::step(short mask) {
 bool BinaryMessagePipe::drainBuffers() {
     if (sendptr != NULL || !queue.empty()) {
         do {
+            backoff();
             if (sendptr == NULL) {
                 if (!queue.empty()) {
                     sendptr = queue.front()->data.req->bytes;
@@ -81,6 +83,8 @@ bool BinaryMessagePipe::readMessage() {
         char *dst;
         size_t nbytes;
         ssize_t nr = 0;
+
+        backoff();
 
         if (msg == NULL) {
             dst = reinterpret_cast<char*>(&header) + avail;
