@@ -34,7 +34,7 @@ extern "C" {
 }
 
 void setBackoffLimits(std::string limits) {
-    int pos;
+    size_t pos;
     if ((pos = limits.find(",")) == std::string::npos) {
         std::cerr << "You need to specify both parameters to -M" << std::endl;
         exit(EXIT_FAILURE);
