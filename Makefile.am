@@ -15,7 +15,6 @@
 #   limitations under the License.
 
 SPEC=vbm15to163.spec
-VERSION=$(shell git describe | sed s/-/_/g)
 RELEASE=1
 
 ACLOCAL_AMFLAGS = -I m4 --force
@@ -66,7 +65,7 @@ endif
 
 vbucketmigrator_LDADD += -lpthread
 
-buckets_test_SOURCES = src/buckets.hh src/buckets.cc test/buckets.cc
+buckets_test_SOURCES = src/buckets.h src/buckets.cc test/buckets.cc
 
 check_PROGRAMS=buckets_test
 TESTS=${check_PROGRAMS}
@@ -87,10 +86,10 @@ dirs: .builddir/rpmtop/BUILD \
       .builddir/rpmtop/SRPMS
 
 vbm15to163.spec:
-        cat ${SPEC}.in | sed "s/^Version:.*/Version: ${VERSION}/" | \
-        sed "s/^Release:.*/Release: ${RELEASE}/" > ${SPEC}
+	cat ${SPEC}.in | sed "s/^Version:.*/Version: ${VERSION}/" | \
+	sed "s/^Release:.*/Release: ${RELEASE}/" > ${SPEC}
 
 rpm: all dist dirs vbm15to163.spec
-        cp vbucketmigrator-$(VERSION).tar.gz ${PWD}/.builddir/SOURCES/
-        rpmbuild --define="_topdir ${PWD}/.builddir/rpmtop" -ba vbm15to163.spec
-        cp .builddir/rpmtop/RPMS/*/*.rpm .
+	cp vbucketmigrator-$(VERSION).tar.gz ${PWD}/.builddir/SOURCES/
+	rpmbuild --define="_topdir ${PWD}/.builddir/rpmtop" -ba vbm15to163.spec
+	cp .builddir/rpmtop/RPMS/*/*.rpm .
