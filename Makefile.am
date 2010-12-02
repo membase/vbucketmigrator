@@ -1,6 +1,6 @@
 # vbucketmigrator
 #
-#     Copyright 2010 NorthScale, Inc.
+#     Copyright 2010 Membase, Inc.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -13,6 +13,10 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+
+SPEC=vbm15to163.spec
+VERSION=$(shell git describe | sed s/-/_/g)
+RELEASE=1
 
 ACLOCAL_AMFLAGS = -I m4 --force
 
@@ -68,3 +72,25 @@ check_PROGRAMS=buckets_test
 TESTS=${check_PROGRAMS}
 
 test: check-TESTS
+
+.builddir:; -@mkdir $@
+.builddir/rpmtop/BUILD:; -@mkdir -p $@
+.builddir/rpmtop/RPMS/i386:; -@mkdir -p $@
+.builddir/rpmtop/RPMS/x86_64:; -@mkdir -p $@
+.builddir/rpmtop/SOURCES:; -@mkdir -p $@
+.builddir/rpmtop/SRPMS:; -@mkdir -p $@
+
+dirs: .builddir/rpmtop/BUILD \
+      .builddir/rpmtop/RPMS/i386 \
+      .builddir/rpmtop/RPMS/x86_64 \
+      .builddir/rpmtop/SOURCES \
+      .builddir/rpmtop/SRPMS
+
+vbm15to163.spec:
+        cat ${SPEC}.in | sed "s/^Version:.*/Version: ${VERSION}/" | \
+        sed "s/^Release:.*/Release: ${RELEASE}/" > ${SPEC}
+
+rpm: all dist dirs vbm15to163.spec
+        cp vbucketmigrator-$(VERSION).tar.gz ${PWD}/.builddir/SOURCES/
+        rpmbuild --define="_topdir ${PWD}/.builddir/rpmtop" -ba vbm15to163.spec
+        cp .builddir/rpmtop/RPMS/*/*.rpm .

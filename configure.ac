@@ -25,6 +25,8 @@ AC_DISABLE_STATIC
 PANDORA_CANONICAL_TARGET(less-warnings, require-cxx,
                          force-gcc42)
 
+AM_INIT_AUTOMAKE(-Wall nostdinc subdir-objects)
+
 PANDORA_REQUIRE_LIBEVENT
 
 AH_TOP([
