@@ -1,15 +1,18 @@
 =head1 NAME
 
-vbucketmigrator - migrate virtual buckets
+vbm15to163 - migrate data from Membase 1.5 to 1.6.3 or later
 
 =head1 SYNOPSIS
 
-  vbucketmigrator [options]
+  vbm15to163 [options]
 
 =head1 DESCRIPTION
 
-vbucketmigrator lets you move/copy the content of one vbucket from one
-memcached server to another.
+vbm15to163 is a utility designed only for migrating from certain old
+releases of membase to an updated release of membase.  
+
+Check with support@membase.org before trying to use this utility for
+any other purposes.  It's scope is very, very limited.
 
 =head1 OPTIONS
 
@@ -82,5 +85,11 @@ intended on other memcached engines.
 =item -F
 
 Flush all the data from the receiving side before sending new data.
+
+=item -M d,l
+
+Specify a period of time to backoff, and how long the ep_queue_size may
+become on a downstream connection.  -M - will set the defaults of 500
+and 10000.
 
 =cut
