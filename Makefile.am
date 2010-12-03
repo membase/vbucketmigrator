@@ -89,7 +89,10 @@ vbm15to163.spec:
 	cat ${SPEC}.in | sed "s/^Version:.*/Version: ${VERSION}/" | \
 	sed "s/^Release:.*/Release: ${RELEASE}/" > ${SPEC}
 
-rpm: all dist dirs vbm15to163.spec
-	cp vbucketmigrator-$(VERSION).tar.gz ${PWD}/.builddir/SOURCES/
-	rpmbuild --define="_topdir ${PWD}/.builddir/rpmtop" -ba vbm15to163.spec
+rpm: all dirs vbm15to163.spec
+	$(MAKE) \
+	bindir=/root/src/vbucketmigrator/.builddir/rpmtop/BUILD/usr/bin \
+	datarootdir=/root/src/vbucketmigrator/.builddir/rpmtop/BUILD/usr/share \
+	install
+	rpmbuild --define="_topdir ${PWD}/.builddir/rpmtop" -bb vbm15to163.spec
 	cp .builddir/rpmtop/RPMS/*/*.rpm .

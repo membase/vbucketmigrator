@@ -24,11 +24,8 @@ membase 1.5-1.6.1 to membase 1.6 from 1.6.3 on.
 Forward compatiblity beyond 1.6 is not guaranteed.
 
 %prep
-#%setup -q -n %{name}-@FULLVERSION@
 
 %build
-
-%install
 
 # Default configs
 #mkdir -p %{buildroot}/%{_sysconfdir}/sysconfig
@@ -45,32 +42,10 @@ Forward compatiblity beyond 1.6 is not guaranteed.
 
 %clean
 
-%post
-#/sbin/chkconfig --add %{bin_name}
-
-%preun
-#if [ "$1" = 0 ] ; then
-#    /sbin/service %{bin_name} stop > /dev/null 2>&1
-#    /sbin/chkconfig --del %{bin_name}
-#fi
-#exit 0
-
-%postun
-#if [ "$1" -ge 1 ]; then
-#    /sbin/service %{bin_name} condrestart > /dev/null 2>&1
-#fi
-#exit 0
-
-
 %files
 %defattr(-,root,root,-)
-#%doc AUTHORS ChangeLog COPYING NEWS README doc/CONTRIBUTORS doc/*.txt
-%doc
-#%config(noreplace) %{_sysconfdir}/sysconfig/%{bin_name}
-
-#%dir %attr(755,nobody,nobody) %{_localstatedir}/run/%{bin_name}
-#%{_initrddir}/%{bin_name}
-/opt/membase/bin/%{bin_name}
+%{_bindir}/%{bin_name}
+%{_mandir}/*
 
 %changelog
 * Wed Dec  01 2010 Matt Ingenthron <matt@membase.com>  - 1.6.3
