@@ -8,6 +8,7 @@
 *.pyc
 *.tcov
 *~
+.builddir/
 .deps/
 .libs/
 /INSTALL
@@ -43,3 +44,5 @@ port_adaptor
 vbucketmigrator
 vbucketmigrator.exe
 vbucketmigrator.1m
+vbm15to163-1.6.3.1r-1.x86_64.rpm
+vbm15to163.spec
