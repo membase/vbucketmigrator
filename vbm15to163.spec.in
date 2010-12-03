@@ -1,4 +1,6 @@
 %define bin_name vbm15to163
+%define _bindir /opt/membase/bin
+%define _mandir /opt/membase/man
 
 Name:           vbm15to163
 Version:        @VERSION@
