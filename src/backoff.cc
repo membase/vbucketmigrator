@@ -166,7 +166,7 @@ void backoff(void) {
       pthread_mutex_unlock(&slowdown_mutex);
       if (delay) {
           if (verbosity) {
-              std::cout << "Backing off for " << val << "ms"
+              std::cout << "Backing off for " << val/1000 << "ms"
                         << std::endl;
           }
           usleep(val);
