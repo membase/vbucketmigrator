@@ -359,25 +359,11 @@ vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket, int tmout) {
         throw std::runtime_error(ss.str());
     }
 
-    std::string state = msg->getBody();
+    vbucket_state_t state;
+    memcpy(&state, &msg->data.vg->message.body.state, sizeof(state));
+    state = (vbucket_state_t)ntohl(state);
+    // std::string state = msg->getBody();
     delete msg;
     msg = NULL;
-    vbucket_state_t ret;
-
-    if (state.compare("active") == 0) {
-        ret = active;
-    } else if (state.compare("replica") == 0) {
-        ret = replica;
-    } else if (state.compare("pending") == 0) {
-        ret = pending;
-    } else if (state.compare("dead") == 0) {
-        ret = dead;
-    } else {
-        std::stringstream ss;
-        ss << "Internal error, received unknown vbucket state: ["
-           << state.c_str() << "] " << state.length();
-        throw std::runtime_error(ss.str());
-    }
-
-    return ret;
+    return state;
 }

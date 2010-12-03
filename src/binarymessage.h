@@ -106,16 +106,16 @@ public:
 
                 ss << " (set vbucket state to \"";
                 switch (state) {
-                case active:
+                case vbucket_state_active:
                     ss << "active\"";
                     break;
-                case replica:
+                case vbucket_state_replica:
                     ss << "replica\"";
                     break;
-                case pending:
+                case vbucket_state_pending:
                     ss << "pending\"";
                     break;
-                case dead:
+                case vbucket_state_dead:
                     ss << "dead\"";
                     break;
                 default:
@@ -145,6 +145,7 @@ public:
         protocol_binary_request_tap_flush *flush;
         protocol_binary_request_tap_opaque *opaque;
         protocol_binary_request_tap_vbucket_set *vs;
+        protocol_binary_response_get_vbucket *vg;
         char *rawBytes;
     } data;
 };

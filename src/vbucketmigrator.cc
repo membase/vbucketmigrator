@@ -166,12 +166,12 @@ public:
             memcpy(&state, msg->data.rawBytes + sizeof(msg->data.vs->bytes),
                    sizeof(state));
             state = static_cast<vbucket_state_t>(ntohl(state));
-            if (state == pending) {
+            if (state == vbucket_state_pending) {
                 cout << "Starting to move bucket "
                      << msg->getVBucketId()
                      << endl;
                 cout.flush();
-            } else if (state == active) {
+            } else if (state == vbucket_state_active) {
                 ++moved;
                 cout << "Bucket "
                      << msg->getVBucketId()
@@ -653,10 +653,10 @@ int main(int argc, char **argv)
             try {
                 vbucket_state_t state = downstreamPipe->getVBucketState(*iter,
                                                                         timeout * 1000);
-                if (state == active) {
+                if (state == vbucket_state_active) {
                     ++numSuccess;
                 }
-                if (state != active) {
+                if (state != vbucket_state_active) {
                     cerr << "Incorrect state for " << *iter
                          << " at "
                          << downstreamPipe->toString() << ": " << state << endl;
