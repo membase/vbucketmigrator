@@ -24,7 +24,7 @@
 pthread_mutex_t slowdown_mutex = PTHREAD_MUTEX_INITIALIZER;
 volatile bool slowdown;
 
-static int backoffTime = 500;
+static int backoffTime = 50000;
 static long maxQueueSize = 100000;
 
 static Socket *monitor;
@@ -171,8 +171,8 @@ void backoff(void) {
           }
           usleep(val);
           val <<= 2;
-          if (val > 10000) {
-              val = 10000;
+          if (val > 5000000) {
+              val = 5000000;
           }
       }
    } while (delay);
