@@ -91,8 +91,8 @@ vbm15to163.spec:
 
 rpm: all dirs vbm15to163.spec
 	$(MAKE) \
-	bindir=/root/src/vbucketmigrator/.builddir/rpmtop/BUILD/usr/bin \
-	datarootdir=/root/src/vbucketmigrator/.builddir/rpmtop/BUILD/usr/share \
+	bindir=/root/src/vbucketmigrator/.builddir/rpmtop/BUILD/opt/membase/bin \
+	mandir=/root/src/vbucketmigrator/.builddir/rpmtop/BUILD/opt/membase/man \
 	install
 	rpmbuild --define="_topdir ${PWD}/.builddir/rpmtop" -bb vbm15to163.spec
 	cp .builddir/rpmtop/RPMS/*/*.rpm .
