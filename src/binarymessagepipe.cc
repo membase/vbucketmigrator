@@ -346,7 +346,7 @@ vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket, int tmout) {
         throw std::runtime_error(std::string("Failed to receive vbucket state"));
     }
 
-    if (msg->data.res->response.opcode != 0x84) {
+    if (msg->data.res->response.opcode != PROTOCOL_BINARY_CMD_GET_VBUCKET) {
         std::stringstream ss;
         ss << "Internal error, unexpected package received during vbucket validaton. Expected GET_VBUCKET, got: " << msg->toString();
         throw std::runtime_error(ss.str());

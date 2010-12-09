@@ -249,32 +249,21 @@ public:
     }
 };
 
-/**
- * This is a ep-engine specific command, and may not be supported on
- * the target engine.. In addition it's ascii protocol using the binary
- * protocol....
- */
 class GetVBucketStateBinaryMessage : public BinaryMessage {
 public:
     GetVBucketStateBinaryMessage(uint16_t bucket) : BinaryMessage()
     {
-        std::stringstream ss;
-        ss << bucket;
-        std::string v = ss.str();
-
-        size = sizeof(data.req->bytes) + v.length();
+        size = sizeof(data.req->bytes);
         data.rawBytes = new char[size];
         data.req->request.magic = PROTOCOL_BINARY_REQ;
-        data.req->request.opcode = 0x84;
-        data.req->request.keylen = ntohs(static_cast<uint16_t>(v.length()));
+        data.req->request.opcode = PROTOCOL_BINARY_CMD_GET_VBUCKET;
+        data.req->request.keylen = 0;
         data.req->request.extlen = 0;
         data.req->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        data.req->request.vbucket = 0;
-        data.req->request.bodylen = ntohl(v.length());
+        data.req->request.vbucket = htons(bucket);
+        data.req->request.bodylen = 0;
         data.req->request.opaque = 0xcafecafe;
         data.req->request.cas = 0;
-        memcpy(data.req->bytes + sizeof(data.req->bytes),
-               v.c_str(), v.length());
     }
 };
 
