@@ -154,13 +154,13 @@ void Socket::connect(void) throw (string)
     resolve();
 
     for (struct addrinfo *next= ai; next; next= next->ai_next) {
-        if ((sock = socket(ai->ai_family,
-                           ai->ai_socktype,
-                           ai->ai_protocol)) == INVALID_SOCKET) {
+        if ((sock = socket(next->ai_family,
+                           next->ai_socktype,
+                           next->ai_protocol)) == INVALID_SOCKET) {
             continue;
         }
 
-        if (::connect(sock, ai->ai_addr, ai->ai_addrlen) == SOCKET_ERROR) {
+        if (::connect(sock, next->ai_addr, next->ai_addrlen) == SOCKET_ERROR) {
             closesocket(sock);
             sock = INVALID_SOCKET;
             continue;
