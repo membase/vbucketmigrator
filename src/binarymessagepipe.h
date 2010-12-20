@@ -105,6 +105,8 @@ public:
 
     bool isClosed() const { return closed; }
 
+    void dumpMessages(std::ostream &out);
+
 protected:
 
     /**

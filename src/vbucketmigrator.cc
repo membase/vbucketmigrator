@@ -131,6 +131,10 @@ public:
         return pendingSendCount;
     }
 
+    void dumpMessages(std::ostream &out) {
+        upstream->dumpMessages(out);
+    }
+
 private:
     BinaryMessagePipe *upstream;
     int pendingSendCount;
@@ -634,6 +638,7 @@ int main(int argc, char **argv)
     if (controller.getPendingSendCount() != 0) {
         cerr << "Had " << controller.getPendingSendCount()
              << " pending messages at exit." << endl;
+        controller.dumpMessages(cerr);
         exit_code = exit_code == 0 ? EX_SOFTWARE : exit_code;
     }
 

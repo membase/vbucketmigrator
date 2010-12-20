@@ -367,3 +367,14 @@ vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket, int tmout) {
     msg = NULL;
     return state;
 }
+
+void BinaryMessagePipe::dumpMessages(std::ostream &out)
+{
+    BinaryMessage *next;
+    while (!queue.empty()) {
+        next = queue.front();
+        queue.pop();
+        out << "  " << next->toString() << std::endl;
+        delete next;
+    }
+}
