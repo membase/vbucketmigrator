@@ -33,12 +33,12 @@
 
 class BinaryMessage {
 public:
-    BinaryMessage() : size(0), refcount(0) {
+    BinaryMessage() : size(0) {
         data.rawBytes = NULL;
     }
 
     BinaryMessage(const protocol_binary_request_header &h) throw (std::runtime_error)
-        : size(ntohl(h.request.bodylen) + sizeof(h.bytes)), refcount(0)
+        : size(ntohl(h.request.bodylen) + sizeof(h.bytes))
     {
         // verify the internal
         if (h.request.magic != PROTOCOL_BINARY_REQ &&
@@ -135,7 +135,6 @@ public:
     }
 
     size_t size;
-    int refcount;
     union {
         protocol_binary_request_header *req;
         protocol_binary_response_header *res;

@@ -87,7 +87,6 @@ public:
      *        deleted by calling delete when the message is transferred
      */
     void sendMessage(BinaryMessage *message) {
-        ++message->refcount;
         queue.push(message);
         updateEvent();
     }

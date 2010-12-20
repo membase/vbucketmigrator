@@ -61,10 +61,7 @@ bool BinaryMessagePipe::drainBuffers() {
                 BinaryMessage *next = queue.front();
                 queue.pop();
                 callback.messageSent(next);
-                --next->refcount;
-                if (next->refcount == 0) {
-                    delete next;
-                }
+                delete next;
                 sendptr = NULL;
             } else {
                 sendptr += nw;
@@ -221,7 +218,6 @@ void BinaryMessagePipe::authenticate(const std::string &authname,
     memcpy(secret.secret.data, password.c_str(), password.length());
 
     BinaryMessage *message = new SaslListMechsBinaryMessage;
-    ++message->refcount;
     queue.push(message);
     if (!drainBuffers()) {
         throw std::runtime_error(std::string("Failed to send auth data"));
@@ -266,7 +262,6 @@ void BinaryMessagePipe::authenticate(const std::string &authname,
     size_t clen = strlen(chosenmech);
     message = new SaslAuthBinaryMessage(clen, chosenmech, len, data);
     do {
-        ++message->refcount;
         queue.push(message);
         if (!drainBuffers()) {
             sasl_dispose(&conn);
@@ -336,7 +331,6 @@ vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket, int tmout) {
         sock.setTimeout(tmout);
     }
     BinaryMessage *message = new GetVBucketStateBinaryMessage(bucket);
-    ++message->refcount;
     queue.push(message);
     if (!drainBuffers()) {
         throw std::runtime_error(std::string("Failed to send vbucket get state"));
