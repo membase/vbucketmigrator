@@ -612,11 +612,16 @@ int main(int argc, char **argv)
         cerr << "Failed to connect to host: " << e.c_str() << endl;
         return EX_CONFIG;
     }
+
     upstreamPipe->sendMessage(new TapRequestBinaryMessage(name, buckets,
                                                           takeover, tapAck));
     upstreamPipe->updateEvent();
     upstream.setDownstream(downstreamPipe);
     controller.setUpstream(upstreamPipe);
+
+    if (flush) {
+        controller.incrementPendingDownstream();
+    }
 
     event_base_loop(evbase, 0);
 
