@@ -356,7 +356,6 @@ vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket, int tmout) {
     vbucket_state_t state;
     memcpy(&state, &msg->data.vg->message.body.state, sizeof(state));
     state = (vbucket_state_t)ntohl(state);
-    // std::string state = msg->getBody();
     delete msg;
     msg = NULL;
     return state;

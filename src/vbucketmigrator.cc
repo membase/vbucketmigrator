@@ -86,14 +86,18 @@ class UpstreamController {
 public:
     UpstreamController() :
         upstream(0), pendingSendCount(0),
-        closed(false), inputPlugged(false), aborting(false) {}
+        closed(false), inputPlugged(false), aborting(false)
+    {
+        // Empty
+    }
 
     void sendUpstreamMessage(BinaryMessage *msg) {
         upstream->sendMessage(msg);
     }
     void incrementPendingDownstream() {
-        if (!upstream)
+        if (!upstream) {
             return;
+        }
 
         pendingSendCount++;
         if (!inputPlugged && pendingSendCount > PENDING_SEND_HI_WAT) {
@@ -102,8 +106,9 @@ public:
         }
     }
     void decrementPendingDownstream() {
-        if (!upstream)
+        if (!upstream) {
             return;
+        }
 
         pendingSendCount--;
         if (inputPlugged && pendingSendCount < PENDING_SEND_LO_WAT && !closed) {
@@ -123,6 +128,7 @@ public:
     void close() {
         closed = true;
     }
+
     void setUpstream(BinaryMessagePipe *_upstream) {
         upstream = _upstream;
     }
@@ -210,7 +216,11 @@ public:
                                       const vector<uint16_t> &_buckets) :
         BinaryMessagePipeCallback(), controller(_controller),
         buckets(_buckets), aborting(false),
-        hasExpiry(false), hasFlags(false), expiry(0), flags(0) {}
+        hasExpiry(false), hasFlags(false), expiry(0), flags(0)
+    {
+        // EMPTY
+    }
+
     void messageReceived(BinaryMessage *msg) {
         if (verbosity > 1) {
             std::cout << "Received message from upstream server: "
@@ -242,7 +252,7 @@ public:
     }
 
     void fixMessage(BinaryMessage *msg) {
-        if(hasExpiry) {
+        if (hasExpiry) {
             msg->setExpiry(expiry);
         }
         if (hasFlags) {
