@@ -43,7 +43,6 @@ static unsigned int timeout = 0;
 static int exit_code = EX_OK;
 static struct event timerev;
 static bool evtimer_active(false);
-static size_t moved = 0;
 
 static size_t packets(0);
 
@@ -152,7 +151,10 @@ private:
 class DownstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
 public:
     DownstreamBinaryMessagePipeCallback(UpstreamController *_upstream) :
-        upstream(_upstream), aborting(false) { }
+        upstream(_upstream), aborting(false), moved(0)
+    {
+        // Empty
+    }
 
     void messageReceived(BinaryMessage *msg) {
         if (msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_NOOP) {
@@ -205,9 +207,15 @@ public:
         markcomplete();
         upstream->abort();
     }
+
+    size_t getMoved() const {
+        return moved;
+    }
+
 private:
     UpstreamController *upstream;
     bool aborting;
+    size_t moved;
 };
 
 class UpstreamBinaryMessagePipeCallback : public BinaryMessagePipeCallback {
@@ -639,9 +647,9 @@ int main(int argc, char **argv)
 
     event_base_loop(evbase, 0);
 
-    if (takeover && moved != buckets.size()) {
+    if (takeover && downstream.getMoved() != buckets.size()) {
         cerr << "Did not move enough vbuckets in takeover: "
-             << moved << "/" << buckets.size() << endl;
+             << downstream.getMoved() << "/" << buckets.size() << endl;
         exit_code = exit_code == 0 ? EX_SOFTWARE : exit_code;
     }
 
