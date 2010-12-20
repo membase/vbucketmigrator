@@ -172,23 +172,32 @@ public:
     void messageSent(BinaryMessage *msg) {
         upstream->decrementPendingDownstream();
 
-        if (msg->data.req->request.opcode == PROTOCOL_BINARY_CMD_TAP_VBUCKET_SET && (msg->size - sizeof(msg->data.vs->bytes)) >= sizeof(vbucket_state_t)) {
-            // test the state thing..
-            vbucket_state_t state;
-            memcpy(&state, msg->data.rawBytes + sizeof(msg->data.vs->bytes),
-                   sizeof(state));
-            state = static_cast<vbucket_state_t>(ntohl(state));
-            if (state == vbucket_state_pending) {
-                cout << "Starting to move bucket "
-                     << msg->getVBucketId()
-                     << endl;
-                cout.flush();
-            } else if (state == vbucket_state_active) {
-                ++moved;
-                cout << "Bucket "
-                     << msg->getVBucketId()
-                     << " moved to the next server" << endl;
-                cout.flush();
+        uint8_t opcode = msg->data.req->request.opcode;
+        if (opcode == PROTOCOL_BINARY_CMD_TAP_VBUCKET_SET) {
+            if (msg->size - sizeof(msg->data.vs->bytes) == sizeof(vbucket_state_t)) {
+                // test the state thing..
+                vbucket_state_t state;
+                memcpy(&state, msg->data.rawBytes + sizeof(msg->data.vs->bytes),
+                       sizeof(state));
+                state = static_cast<vbucket_state_t>(ntohl(state));
+                if (state == vbucket_state_pending) {
+                    cout << "Starting to move bucket "
+                         << msg->getVBucketId()
+                         << endl;
+                    cout.flush();
+                } else if (state == vbucket_state_active) {
+                    ++moved;
+                    cout << "Bucket "
+                         << msg->getVBucketId()
+                         << " moved to the next server" << endl;
+                    cout.flush();
+                } else if (!is_valid_vbucket_state_t(state)) {
+                    cerr << "Illegal vbucket state received: "
+                         << state << endl;
+                }
+            } else {
+                cerr << "Incorrect message size for TAP_VBUCKET_SET: " <<
+                    msg->size - sizeof(msg->data.vs->bytes) << endl;
             }
         }
     }
