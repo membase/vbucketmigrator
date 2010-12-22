@@ -13,6 +13,7 @@
 /INSTALL
 /aclocal.m4
 /autom4te.cache
+/buckets_test
 /config.h
 /config.h.in
 /config.log
@@ -41,5 +42,5 @@ moveit
 moveit.exe
 port_adaptor
 vbucketmigrator
-vbucketmigrator.exe
 vbucketmigrator.1m
+vbucketmigrator.exe
