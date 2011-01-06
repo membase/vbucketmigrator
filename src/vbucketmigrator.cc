@@ -715,6 +715,8 @@ int main(int argc, char **argv)
         }
 
         if (numSuccess != buckets.size() && exit_code == 0) {
+            cerr << "Expected to move " << buckets.size()
+                 << " buckets, but moved " << numSuccess << std::endl;
             exit_code = EX_SOFTWARE;
         }
     }
