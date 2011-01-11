@@ -238,6 +238,14 @@ public:
         // EMPTY
     }
 
+    void messageSent(BinaryMessage *msg) {
+        if (verbosity > 1) {
+            std::cout << "Message from downstream sent upstream: "
+                      << msg->toString() << std::endl;
+        }
+    }
+
+
     void messageReceived(BinaryMessage *msg) {
         if (verbosity > 1) {
             std::cout << "Received message from upstream server: "

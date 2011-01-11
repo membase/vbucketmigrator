@@ -91,11 +91,55 @@ public:
         }
     }
 
+    std::string getComCode() const {
+        switch (data.req->request.opcode) {
+        case PROTOCOL_BINARY_CMD_NOOP: return "NOOP";
+        case PROTOCOL_BINARY_CMD_TAP_CONNECT: return "TCONNECT";
+        case PROTOCOL_BINARY_CMD_TAP_MUTATION: return "TMUTATION";
+        case PROTOCOL_BINARY_CMD_TAP_DELETE: return "TDELETE";
+        case PROTOCOL_BINARY_CMD_TAP_FLUSH: return "TFLUSH";
+        case PROTOCOL_BINARY_CMD_TAP_OPAQUE: return "TOPAQUE";
+        case PROTOCOL_BINARY_CMD_TAP_VBUCKET_SET: return "TVBSET";
+        default:
+            {
+                std::stringstream ss;
+                ss << "0x" << std::setfill('0') << std::setw(2) << std::hex
+                   << static_cast<int>(data.req->request.opcode);
+                return ss.str();
+            }
+        }
+    }
+
+    std::string getMessageType() const {
+        switch (data.req->request.magic) {
+        case PROTOCOL_BINARY_REQ: return "REQ";
+        case PROTOCOL_BINARY_RES: return "RES";
+        default:
+            {
+                std::stringstream ss;
+                ss << "0x" << std::setfill('0') << std::setw(2) << std::hex
+                   << static_cast<int>(data.req->request.magic);
+                return ss.str();
+            }
+        }
+    }
+
     std::string toString() const {
         std::stringstream ss;
-        ss << "[ V: " << getVBucketId()
-           << " opcode: 0x" << std::setfill('0') << std::setw(2) << std::hex
-           << static_cast<int>(data.req->request.opcode);
+        ss << "[ " << getMessageType()
+           << " V: " << getVBucketId()
+           << " " << getComCode();
+
+        if (data.req->request.opcode >= PROTOCOL_BINARY_CMD_TAP_MUTATION &&
+            data.req->request.opcode <= PROTOCOL_BINARY_CMD_TAP_VBUCKET_SET) {
+            ss << " (tap seqno: " << std::hex << ntohl(data.req->request.opaque);
+
+            uint16_t flags = ntohs(data.mutation->message.body.tap.flags);
+            if (flags & TAP_FLAG_ACK) {
+                ss << " ACK request";
+            }
+            ss << ")";
+        }
 
         if (data.req->request.opcode == PROTOCOL_BINARY_CMD_TAP_VBUCKET_SET) {
             if (ntohl(data.req->request.bodylen) >= sizeof(vbucket_state_t)) {
