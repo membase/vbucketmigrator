@@ -399,6 +399,7 @@ static BinaryMessagePipe *getServer(const string &destination,
             cout << "Connecting to " << *sock << endl;
         }
         sock->connect();
+        sock->setKeepalive(true);
         ret = new BinaryMessagePipe(*sock, cb, b, timeout);
         if (auth.length() > 0) {
             if (verbosity) {

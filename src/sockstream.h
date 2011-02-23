@@ -75,6 +75,8 @@ public:
     void setTimeout(int millis);
     void setTimeout(int which, int millis);
 
+    void setKeepalive(bool enable) throw (std::string);
+
     void resolve(void) throw (std::string);
     void connect(void) throw (std::string);
     void close(void);
