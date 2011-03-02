@@ -52,7 +52,7 @@ vbucketmigrator.1m: docs/vbucketmigrator.pod
 
 if BUILD_WINDOWS_FILES
 vbucketmigrator_SOURCES += src/mutex_win32.cc src/winsock.cc
-vbucketmigrator_LDADD += -lWs2_32 -lmswsock
+vbucketmigrator_LDADD += -lws2_32 -lmswsock
 else
 if HAVE_PTHREAD
 vbucketmigrator_SOURCES += src/mutex_pthread.cc
