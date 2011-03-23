@@ -249,7 +249,7 @@ void Socket::setKeepalive(bool enable) throw (std::string)
     int optval = enable ? 1 : 0;
     int optlen = sizeof(optval);
 
-    if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen) < 0) {
+    if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (char*)&optval, optlen) < 0) {
         char buffer[1024];
         sprintf(buffer, "Failed to %sable keepalive: %s",
                 enable ? "en" : "dis", strerror(errno));
