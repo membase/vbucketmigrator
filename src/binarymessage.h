@@ -196,7 +196,7 @@ public:
 class TapRequestBinaryMessage : public BinaryMessage {
 public:
     TapRequestBinaryMessage(const std::string &name, std::vector<uint16_t> buckets,
-                            bool takeover, bool tapAck) :
+                            bool takeover, bool tapAck, bool registeredTapClient) :
         BinaryMessage()
     {
         size = sizeof(data.tap_connect->bytes) + buckets.size() * 2 + 2 + name.length();
@@ -220,6 +220,9 @@ public:
 
         if (tapAck) {
             flags |= TAP_CONNECT_SUPPORT_ACK;
+        }
+        if (registeredTapClient) {
+            flags |= TAP_CONNECT_CHECKPOINT | TAP_CONNECT_REGISTERED_CLIENT;
         }
 
         data.tap_connect->message.body.flags = htonl(flags);

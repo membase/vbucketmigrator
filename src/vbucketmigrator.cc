@@ -67,7 +67,8 @@ static void usage(std::string binary) {
          << "\t-e           Run as an Erlang port" << endl
          << "\t-V           Validate bucket takeover" << endl
          << "\t-E expiry    Reset the expiry of all items to 'expiry'." << endl
-         << "\t-f flag      Reset the flag of all items to 'flag'." << endl;
+         << "\t-f flag      Reset the flag of all items to 'flag'." << endl
+         << "\t-r           Connect to the master as a registered TAP client" << endl;
     exit(EX_USAGE);
 }
 
@@ -507,10 +508,11 @@ int main(int argc, char **argv)
     string name;
     bool validate = false;
     bool flush = false;
+    bool registeredTapClient = false;
     string expiryResetValue;
     string flagResetValue;
 
-    while ((cmd = getopt(argc, argv, "N:Aa:h:b:d:tvFT:e?VE:f:")) != EOF) {
+    while ((cmd = getopt(argc, argv, "N:Aa:h:b:d:tvFT:e?VE:rf:")) != EOF) {
         switch (cmd) {
         case 'E':
             expiryResetValue.assign(optarg);
@@ -558,6 +560,9 @@ int main(int argc, char **argv)
             break;
         case 'V':
             validate = true;
+            break;
+        case 'r':
+            registeredTapClient = true;
             break;
         case '?': /* FALLTHROUGH */
         default:
@@ -653,8 +658,8 @@ int main(int argc, char **argv)
         return EX_CONFIG;
     }
 
-    upstreamPipe->sendMessage(new TapRequestBinaryMessage(name, buckets,
-                                                          takeover, tapAck));
+    upstreamPipe->sendMessage(new TapRequestBinaryMessage(name, buckets, takeover,
+                                                          tapAck, registeredTapClient));
     upstreamPipe->updateEvent();
     upstream.setDownstream(downstreamPipe);
     controller.setUpstream(upstreamPipe);
