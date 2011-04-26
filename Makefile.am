@@ -61,7 +61,7 @@ endif
 
 vbucketmigrator_LDADD += -lpthread
 
-buckets_test_SOURCES = src/buckets.hh src/buckets.cc test/buckets.cc
+buckets_test_SOURCES = src/buckets.h src/buckets.cc test/buckets.cc
 
 check_PROGRAMS=buckets_test
 TESTS=${check_PROGRAMS}
