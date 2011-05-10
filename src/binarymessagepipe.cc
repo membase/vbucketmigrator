@@ -336,9 +336,11 @@ vbucket_state_t BinaryMessagePipe::getVBucketState(uint16_t bucket, int tmout) {
         throw std::runtime_error(std::string("Failed to send vbucket get state"));
     }
 
-    if (!readMessage()) {
-        throw std::runtime_error(std::string("Failed to receive vbucket state"));
-    }
+    do {
+        if (!readMessage()) {
+            throw std::runtime_error(std::string("Failed to receive vbucket state"));
+        }
+    } while (msg->data.res->response.opcode == PROTOCOL_BINARY_CMD_NOOP);
 
     if (msg->data.res->response.opcode != PROTOCOL_BINARY_CMD_GET_VBUCKET) {
         std::stringstream ss;
