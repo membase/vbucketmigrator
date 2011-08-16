@@ -65,7 +65,7 @@ AC_DEFUN([AC_C_HTONLL],
 
 AC_C_HTONLL
 
-AC_CHECK_HEADERS([arpa/inet.h pthread.h windows.h winsock2.h ws2tcpip.h socket.h netinet/in.h netdb.h sysexits.h sasl/sasl.h])
+AC_CHECK_HEADERS([arpa/inet.h pthread.h windows.h winsock2.h ws2tcpip.h sys/socket.h socket.h netinet/in.h netdb.h sysexits.h sasl/sasl.h])
 
 AS_IF([test "x${ac_cv_header_windows_h}" = "xno"],
       [AC_SEARCH_LIBS(pthread_create, pthread)])

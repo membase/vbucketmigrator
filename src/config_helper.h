@@ -18,6 +18,7 @@
 #define CONDIF_HELPER_H 1
 
 // The intention of this file is to avoid cluttering the code with #ifdefs
+#include <sys/types.h>
 
 #if ((defined (__SUNPRO_C) || defined(__SUNPRO_CC)) || defined __GNUC__)
 #define EXPORT_FUNCTION __attribute__ ((visibility("default")))
@@ -60,6 +61,10 @@ extern void initialize_sockets(void);
 
 #ifdef HAVE_SOCKET_H
 #include <socket.h>
+#endif
+
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
 #endif
 
 #ifdef HAVE_NETINET_IN_H
